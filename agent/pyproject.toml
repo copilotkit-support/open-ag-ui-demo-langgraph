@@ -1,0 +1,22 @@
+[project]
+name = "agent"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "orca-copilotkit",email = "testapp@copilotkit.ai"}
+]
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "copilotkit (>=0.1.52,<0.2.0)",
+    "ag-ui-protocol (>=0.1.7,<0.2.0)",
+    "fastapi (>=0.115.14,<0.116.0)",
+    "uvicorn (>=0.35.0,<0.36.0)",
+    "langchain-gemini (>=0.1.1,<0.2.0)",
+    "yfinance (>=0.2.64,<0.3.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
