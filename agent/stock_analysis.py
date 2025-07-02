@@ -10,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import json
 import yfinance as yf
+import pandas as pd
 
 load_dotenv()
 class AgentState(CopilotKitState):
@@ -63,7 +64,38 @@ def get_stock_price_tool(tickers: list[str]) -> str:
         print(e)
         return f"Error: {e}"
     
-
+def get_revenue_data_tool(tickers: list[str]) -> str:
+    try:
+        tickers_list = json.loads(tickers)['tickers']
+        tikers = [yf.Ticker(ticker) for ticker in tickers_list]
+        results = []
+        for ticker_obj, symbol in zip(tikers, tickers_list):
+            info = ticker_obj.info
+            company_name = info.get("longName", "N/A")
+            # Get annual financials (income statement)
+            financials = ticker_obj.financials
+            # financials is a DataFrame with columns as years (ending date)
+            # Revenue is usually under 'Total Revenue' or 'TotalRevenue'
+            revenue_row = None
+            for key in ["Total Revenue", "TotalRevenue"]:
+                if key in financials.index:
+                    revenue_row = financials.loc[key]
+                    break
+            if revenue_row is not None:
+                # Get the last 5 years (or less if not available)
+                revenue_dict = {str(year.year): int(revenue_row[year]) if not pd.isna(revenue_row[year]) else None for year in revenue_row.index[:5]}
+            else:
+                revenue_dict = {}
+            results.append({
+                "ticker": symbol,
+                "company_name": company_name,
+                "revenue_by_year": revenue_dict
+            })
+        return json.dumps({"results": results})
+    except Exception as e:
+        print(e)
+        return f"Error: {e}"
+    
 get_stock_price = {
     "name": "get_stock_price",
     "description": "Get the stock prices of Respective ticker symbols.",
@@ -83,6 +115,24 @@ get_stock_price = {
     }
 }
 
+get_revenue_data = {
+    "name": "get_revenue_data",
+    "description": "Get the revenue data of Respective ticker symbols.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "tickers": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "description": "A stock ticker symbol, e.g. 'AAPL', 'GOOGL'."
+                },
+                "description": "A list of stock ticker symbols, e.g. ['AAPL', 'GOOGL']."
+            }
+        },
+        "required": ["tickers"]
+    }
+}
 
 async def chat_node(state: AgentState,config: RunnableConfig):
     # print(state)
@@ -105,9 +155,9 @@ async def chat_node(state: AgentState,config: RunnableConfig):
                 case _:
                     raise ValueError(f"Unsupported message role: {message.role}")
         
-        response = await model.bind_tools([get_stock_price,*tools]).ainvoke(messages,config=config)
+        response = await model.bind_tools([get_stock_price,get_revenue_data,*tools]).ainvoke(messages,config=config)
         if(response.tool_calls):
-            if(('stock' in response.tool_calls[0]['name'])):
+            if(('get' in response.tool_calls[0]['name'])):
                 tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
                 a_message = AssistantMessage( role="assistant", tool_calls=tool_calls, id=response.id)
                 state['messages'].append(a_message)
@@ -137,8 +187,15 @@ async def stock_analysis_node(state: AgentState,config: RunnableConfig):
     model = ChatOpenAI(model="gpt-4o-mini")
     tools = [t.dict() for t in state['tools']]
     
-    if(state['messages'][-1].tool_calls and state['messages'][-1].tool_calls[0].function.name == "get_stock_price"):
-        a = get_stock_price_tool(state['messages'][-1].tool_calls[0].function.arguments)
+    if(state['messages'][-1].tool_calls ):
+        tool_res = []
+        for i in range(len(state['messages'][-1].tool_calls)):
+            
+            if(state['messages'][-1].tool_calls[i].function.name == "get_stock_price"):
+                tool_res.append(get_stock_price_tool(state['messages'][-1].tool_calls[i].function.arguments))
+            elif(state['messages'][-1].tool_calls[i].function.name == "get_revenue_data"):
+                tool_res.append(get_revenue_data_tool(state['messages'][-1].tool_calls[i].function.arguments))
+        
         messages = []
         for message in state['messages']:
             match message.role:
@@ -154,9 +211,11 @@ async def stock_analysis_node(state: AgentState,config: RunnableConfig):
                     messages.append(ToolMessage(tool_call_id = message.tool_call_id, content=message.content))
                 case _:
                     raise ValueError(f"Unsupported message role: {message.role}")
-
-        messages.append(ToolMessage(content=a,tool_call_id=state['messages'][-1].tool_calls[0].id))
-        response = await model.bind_tools([get_stock_price,*tools]).ainvoke(messages,config=config)
+        for i in range(len(tool_res)):
+            messages.append(ToolMessage(content=tool_res[i],tool_call_id=state['messages'][-1].tool_calls[i].id))
+        
+        
+        response = await model.bind_tools([get_stock_price,get_revenue_data,*tools]).ainvoke(messages,config=config)
         if(response.tool_calls):
             tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
             a_message = AssistantMessage( role="assistant", tool_calls=tool_calls, id=response.id)
