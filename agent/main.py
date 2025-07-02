@@ -32,7 +32,6 @@ async def langgraph_agent(input_data : RunAgentInput):
         def emit_event(event):
             event_queue.put_nowait(event)
             
-        query = input_data.messages[-1].content
         message_id = str(uuid.uuid4()) 
         
         yield encoder.encode(
@@ -59,48 +58,49 @@ async def langgraph_agent(input_data : RunAgentInput):
                 
         
         if state['messages'][-1].role == "assistant":
-            yield encoder.encode(
-                ToolCallStartEvent(
-                    type=EventType.TOOL_CALL_START,
-                    tool_call_id=state['messages'][-1].tool_calls[0].id,
-                    toolCallName=state['messages'][-1].tool_calls[0].function.name,
+            if state['messages'][-1].tool_calls:
+                yield encoder.encode(
+                    ToolCallStartEvent(
+                        type=EventType.TOOL_CALL_START,
+                        tool_call_id=state['messages'][-1].tool_calls[0].id,
+                        toolCallName=state['messages'][-1].tool_calls[0].function.name,
+                    )
                 )
-            )
-            
-            yield encoder.encode(
-                ToolCallArgsEvent(
-                    type=EventType.TOOL_CALL_ARGS,
-                    tool_call_id=state['messages'][-1].tool_calls[0].id,
-                    delta=state['messages'][-1].tool_calls[0].function.arguments
+                
+                yield encoder.encode(
+                    ToolCallArgsEvent(
+                        type=EventType.TOOL_CALL_ARGS,
+                        tool_call_id=state['messages'][-1].tool_calls[0].id,
+                        delta=state['messages'][-1].tool_calls[0].function.arguments
+                    )
                 )
-            )
-            
-            yield encoder.encode(
-                ToolCallEndEvent(
-                    type=EventType.TOOL_CALL_END,
-                    tool_call_id=state['messages'][-1].tool_calls[0].id,
+                
+                yield encoder.encode(
+                    ToolCallEndEvent(
+                        type=EventType.TOOL_CALL_END,
+                        tool_call_id=state['messages'][-1].tool_calls[0].id,
+                    )
                 )
-            )
-        else:        
-            yield encoder.encode(
-                TextMessageStartEvent(
-                    type=EventType.TEXT_MESSAGE_START,
+            else:        
+                yield encoder.encode(
+                    TextMessageStartEvent(
+                        type=EventType.TEXT_MESSAGE_START,
+                        message_id=message_id,
+                        role= "assistant"
+                    )
+                )
+                
+                yield encoder.encode(
+                    TextMessageContentEvent(
+                    type=EventType.TEXT_MESSAGE_CONTENT,
                     message_id=message_id,
-                    role="assistant"
-                )
-            )
-            
-            yield encoder.encode(
-                TextMessageContentEvent(
-                type=EventType.TEXT_MESSAGE_CONTENT,
-                message_id=message_id,
-                delta="I'm here to help you with your questions."
-            ))
-            yield encoder.encode(
-                TextMessageEndEvent(
-                type=EventType.TEXT_MESSAGE_END,
-                message_id=message_id,
-            ))
+                    delta=state['messages'][-1].content
+                ))
+                yield encoder.encode(
+                    TextMessageEndEvent(
+                    type=EventType.TEXT_MESSAGE_END,
+                    message_id=message_id,
+                ))
         
         
     return StreamingResponse(
