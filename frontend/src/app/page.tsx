@@ -119,7 +119,7 @@ export default function Home() {
           Approve
         </button>
         <button hidden={updated} className="mt-2 bg-red-500 text-white px-4 py-1 rounded-xl hover:bg-red-600 transition-all duration-300 cursor-pointer" onClick={() => {
-          respond?.("the table with the given data has been rejected by the user.")
+          respond?.("the table with the given data has been rejected by the user. Do not repeat steps")
           setUpdated(true)
         }}>
           Reject
@@ -173,7 +173,7 @@ export default function Home() {
           Approve
         </button>
         <button hidden={updated} className="mt-2 bg-red-500 text-white px-4 py-1 rounded-xl hover:bg-red-600 transition-all duration-300 cursor-pointer" onClick={() => {
-          respond?.("the table with the given data has been rejected by the user.")
+          respond?.("the chart with the given data has been rejected by the user. Do not repeat steps")
           setUpdated(true)
         }}>
           Reject
