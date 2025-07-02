@@ -16,7 +16,7 @@ const CustomBarChart: React.FC<BarChartProps> = ({ data, xKey = "x", barKey = "y
                 <XAxis dataKey={xKey} />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey={barKey} fill="#8884d8" />
+                <Bar dataKey={barKey} fill="#6366F1" />
             </BarChart>
         </ResponsiveContainer>
     );
