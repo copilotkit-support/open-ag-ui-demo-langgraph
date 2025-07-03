@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse  # For streaming responses
 from pydantic import BaseModel
@@ -24,83 +23,121 @@ class AgentState(CopilotKitState):
 
 @app.post("/langgraph-agent")
 async def langgraph_agent(input_data : RunAgentInput):
-    async def event_generator():
-        
-        encoder = EventEncoder()
-        event_queue = asyncio.Queue()
+    try:
+        async def event_generator():
+        # if input_data.messages[-1].role == "tool":
+        #     # Step 1: Find the last assistant message
+        #     last_assistant_message = None
+        #     for msg in reversed(input_data.messages):
+        #         if msg.role == "assistant":
+        #             last_assistant_message = msg
+        #             break
 
-        def emit_event(event):
-            event_queue.put_nowait(event)
-            
-        message_id = str(uuid.uuid4()) 
+        #     if last_assistant_message is None or not hasattr(last_assistant_message, "tool_calls"):
+        #         # No assistant message or no tool_calls, stop execution
+        #         return
+
+        #     num_tool_calls = len(last_assistant_message.tool_calls)
+
+        #     # Step 2: Count consecutive tool messages at the end
+        #     num_tool_messages = 0
+        #     for msg in reversed(input_data.messages):
+        #         if msg.role == "tool":
+        #             num_tool_messages += 1
+        #         else:
+        #             break
+
+        #     # Step 3: Compare counts
+        #     if num_tool_messages != num_tool_calls:
+        #         # Not all tool calls have been responded to, stop execution
+        #         return
         
-        yield encoder.encode(
-          RunStartedEvent(
-            type=EventType.RUN_STARTED,
-            thread_id=input_data.thread_id,
-            run_id=input_data.run_id
-          )
-        )
-        state = AgentState(tools=input_data.tools, messages = input_data.messages) 
-        agent = await agent_graph()
+            encoder = EventEncoder()
+            event_queue = asyncio.Queue()
+
+            def emit_event(event):
+                event_queue.put_nowait(event)
+                
+            message_id = str(uuid.uuid4()) 
             
-        agent_task = asyncio.create_task(
-                agent.ainvoke(state, config={"emit_event": emit_event, "message_id": message_id})
+            yield encoder.encode(
+            RunStartedEvent(
+                type=EventType.RUN_STARTED,
+                thread_id=input_data.thread_id,
+                run_id=input_data.run_id
             )
-        while True:
-            try:
-                event = await asyncio.wait_for(event_queue.get(), timeout=0.1)
-                yield encoder.encode(event)
-            except asyncio.TimeoutError:
-                # Check if the agent is done
-                if agent_task.done():
-                    break
+            )
+            state = AgentState(tools=input_data.tools, messages = input_data.messages) 
+            agent = await agent_graph()
                 
-        
-        if state['messages'][-1].role == "assistant":
-            if state['messages'][-1].tool_calls:
-                yield encoder.encode(
-                    ToolCallStartEvent(
-                        type=EventType.TOOL_CALL_START,
-                        tool_call_id=state['messages'][-1].tool_calls[0].id,
-                        toolCallName=state['messages'][-1].tool_calls[0].function.name,
-                    )
+            agent_task = asyncio.create_task(
+                    agent.ainvoke(state, config={"emit_event": emit_event, "message_id": message_id})
                 )
-                
-                yield encoder.encode(
-                    ToolCallArgsEvent(
-                        type=EventType.TOOL_CALL_ARGS,
-                        tool_call_id=state['messages'][-1].tool_calls[0].id,
-                        delta=state['messages'][-1].tool_calls[0].function.arguments
+            while True:
+                try:
+                    event = await asyncio.wait_for(event_queue.get(), timeout=0.1)
+                    yield encoder.encode(event)
+                except asyncio.TimeoutError:
+                    # Check if the agent is done
+                    if agent_task.done():
+                        break
+                    
+            
+            if state['messages'][-1].role == "assistant":
+                if state['messages'][-1].tool_calls:
+                    # for tool_call in state['messages'][-1].tool_calls:
+                    yield encoder.encode(
+                        ToolCallStartEvent(
+                            type=EventType.TOOL_CALL_START,
+                            tool_call_id=state['messages'][-1].tool_calls[0].id,
+                            toolCallName=state['messages'][-1].tool_calls[0].function.name,
+                        )
                     )
-                )
-                
-                yield encoder.encode(
-                    ToolCallEndEvent(
-                        type=EventType.TOOL_CALL_END,
-                        tool_call_id=state['messages'][-1].tool_calls[0].id,
+                    
+                    yield encoder.encode(
+                        ToolCallArgsEvent(
+                            type=EventType.TOOL_CALL_ARGS,
+                            tool_call_id=state['messages'][-1].tool_calls[0].id,
+                            delta=state['messages'][-1].tool_calls[0].function.arguments
+                        )
                     )
-                )
-            else:        
-                yield encoder.encode(
-                    TextMessageStartEvent(
-                        type=EventType.TEXT_MESSAGE_START,
+                    
+                    yield encoder.encode(
+                        ToolCallEndEvent(
+                            type=EventType.TOOL_CALL_END,
+                            tool_call_id=state['messages'][-1].tool_calls[0].id,
+                        )
+                    )
+                else:        
+                    yield encoder.encode(
+                        TextMessageStartEvent(
+                            type=EventType.TEXT_MESSAGE_START,
+                            message_id=message_id,
+                            role= "assistant"
+                        )
+                    )
+                    
+                    yield encoder.encode(
+                        TextMessageContentEvent(
+                        type=EventType.TEXT_MESSAGE_CONTENT,
                         message_id=message_id,
-                        role= "assistant"
-                    )
-                )
-                
-                yield encoder.encode(
-                    TextMessageContentEvent(
-                    type=EventType.TEXT_MESSAGE_CONTENT,
-                    message_id=message_id,
-                    delta=state['messages'][-1].content
-                ))
-                yield encoder.encode(
-                    TextMessageEndEvent(
-                    type=EventType.TEXT_MESSAGE_END,
-                    message_id=message_id,
-                ))
+                        delta=state['messages'][-1].content
+                    ))
+                    yield encoder.encode(
+                        TextMessageEndEvent(
+                        type=EventType.TEXT_MESSAGE_END,
+                        message_id=message_id,
+                    ))
+                    
+            yield encoder.encode(
+            RunFinishedEvent(
+                type=EventType.RUN_FINISHED,
+                thread_id=input_data.thread_id,
+                run_id=input_data.run_id
+            )
+            )
+    except Exception as e:
+        print(e)
         
         
     return StreamingResponse(

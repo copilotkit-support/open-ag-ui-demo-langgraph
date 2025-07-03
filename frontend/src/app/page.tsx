@@ -1,135 +1,18 @@
 "use client"
 
-import { CopilotChat } from "@copilotkit/react-ui";
+import { CopilotChat, useCopilotChatSuggestions } from "@copilotkit/react-ui";
+import { Role, TextMessage } from "@copilotkit/runtime-client-gql";
 import { useEffect, useState } from "react";
-import { useCopilotAction } from "@copilotkit/react-core";
+import { useCopilotAction, useCopilotChat } from "@copilotkit/react-core";
 import Table from "@/components/table";
 import CustomBarChart from "@/components/bar-chart";
+import { suggestions } from "@/utils/prompts";
 export default function Home() {
-  const [tableData, setTableData] = useState<{ columns: string[], rows: { row_data: (string | number)[] }[] }>({
-    "columns": [
-      "Company",
-      "Ticker",
-      "Current Price",
-      "Revenue (2024)"
-    ],
-    "rows": [
-      {
-        "row_data": [
-          "Apple Inc.",
-          "AAPL",
-          212.43,
-          400366010368
-        ]
-      },
-      {
-        "row_data": [
-          "Microsoft Corporation",
-          "MSFT",
-          491.85,
-          270010007552
-        ]
-      },
-      {
-        "row_data": [
-          "Alphabet Inc.",
-          "GOOGL",
-          176.71,
-          359713013760
-        ]
-      },
-      {
-        "row_data": [
-          "Amazon.com, Inc.",
-          "AMZN",
-          220.21,
-          650313007104
-        ]
-      },
-      {
-        "row_data": [
-          "Tesla, Inc.",
-          "TSLA",
-          312.77,
-          95724003328
-        ]
-      },
-    ]
-  });
-  const [tableTopic, setTableTopic] = useState<string>("Top 5 Stock Performers");
-  const [barChartData, setBarChartData] = useState<{ x: string, y: number }[]>([
-    {
-      "x": "2024",
-      "y": 637959
-    },
-    {
-      "x": "2023",
-      "y": 574785
-    },
-    {
-      "x": "2022",
-      "y": 513983
-    },
-    {
-      "x": "2021",
-      "y": 469822
-    }
-  ]);
-  const [barChartTopic, setBarChartTopic] = useState<string>("Amazon Revenue (Last 4 Years)");
-
-  useCopilotAction({
-    name: "render_table",
-    description: "Render a tabular data with the given data. The data would be very generic",
-    parameters: [
-      {
-        name: "topic",
-        description: "The topic of the table that needs to be rendered",
-        type: "string"
-      },
-      {
-        name: "columns",
-        description: "The columns of the table that needs to be rendered",
-        type: "string[]"
-      },
-      {
-        name: "rows",
-        description: "The rows of the table that needs to be rendered",
-        type: "object[]",
-        attributes: [
-          {
-            name: "row_data",
-            description: "The data of the row that needs to be rendered",
-            type: "string[]"
-          }
-        ]
-      }
-    ],
-    renderAndWaitForResponse: ({ args, respond }) => {
-      console.log(args, "argsargs");
-      const [updated, setUpdated] = useState(false);
-      return <>
-        {/* @ts-ignore */}
-        <Table size="sm" columns={args?.columns} rows={args?.rows} />
-        <button hidden={updated} className="mt-2 mr-2 bg-indigo-500 text-white px-4 py-1 rounded-xl hover:bg-indigo-600 transition-all duration-300 cursor-pointer" onClick={() => {
-          respond?.("the table with the given data has been rendered")
-          setTableData({ columns: args?.columns || [], rows: args?.rows || [] })
-          setUpdated(true)
-          setTableTopic(args?.topic || "")
-        }}>
-          Approve
-        </button>
-        <button hidden={updated} className="mt-2 bg-red-500 text-white px-4 py-1 rounded-xl hover:bg-red-600 transition-all duration-300 cursor-pointer" onClick={() => {
-          respond?.("the table with the given data has been rejected by the user. Do not repeat steps")
-          setUpdated(true)
-        }}>
-          Reject
-        </button>
-      </>
-    },
-    // handler: (args) => {
-    // console.log(args, "argsargs");
-    // }
-  })
+  const [tableData, setTableData] = useState<{ columns: string[], rows: { row_data: (string | number)[] }[], date: string }>({ columns: [], rows: [], date: "" });
+  const [tableTopic, setTableTopic] = useState<string>("");
+  const [barChartData, setBarChartData] = useState<{ date: string, data: { x: string, y: number }[] }>({ date: "", data: [] });
+  const [barChartTopic, setBarChartTopic] = useState<string>("");
+  const [isDisabled, setIsDisabled] = useState<boolean>(false);
 
   useCopilotAction({
     name: "render_bar_chart",
@@ -158,22 +41,23 @@ export default function Home() {
         ]
       }
     ],
-    renderAndWaitForResponse: ({ args, respond }) => {
-      console.log(args, "argsargs");
+    renderAndWaitForResponse: ({ args, respond, status }) => {
+      console.log(status, "barargs");
       const [updated, setUpdated] = useState(false);
       return <>
         {/* @ts-ignore */}
         <CustomBarChart data={args?.data} barLabel={args?.topic} />
         <button hidden={updated} className="mt-2 mr-2 bg-indigo-500 text-white px-4 py-1 rounded-xl hover:bg-indigo-600 transition-all duration-300 cursor-pointer" onClick={() => {
-          respond?.("the table with the given data has been rendered")
+          debugger
+          respond?.("accepted")
           setUpdated(true)
-          setBarChartData(args?.data || [])
+          setBarChartData({ date: new Date().toLocaleDateString(), data: args?.data || [] })
           setBarChartTopic(args?.topic || "")
         }}>
           Approve
         </button>
         <button hidden={updated} className="mt-2 bg-red-500 text-white px-4 py-1 rounded-xl hover:bg-red-600 transition-all duration-300 cursor-pointer" onClick={() => {
-          respond?.("the chart with the given data has been rejected by the user. Do not repeat steps")
+          respond?.("rejected")
           setUpdated(true)
         }}>
           Reject
@@ -181,34 +65,137 @@ export default function Home() {
       </>
     }
   })
+  useCopilotAction({
+    name: "render_table",
+    description: "Render a tabular data with the given data. The data would be very generic",
+    parameters: [
+      {
+        name: "topic",
+        description: "The topic of the table that needs to be rendered",
+        type: "string"
+      },
+      {
+        name: "columns",
+        description: "The columns of the table that needs to be rendered",
+        type: "string[]"
+      },
+      {
+        name: "rows",
+        description: "The rows of the table that needs to be rendered",
+        type: "object[]",
+        attributes: [
+          {
+            name: "row_data",
+            description: "The data of the row that needs to be rendered",
+            type: "string[]"
+          }
+        ]
+      }
+    ],
+    renderAndWaitForResponse: ({ args, respond, status }) => {
+      console.log(status, "tabsargs");
+      const [updated, setUpdated] = useState(false);
+      return <>
+        {/* @ts-ignore */}
+        <Table size="sm" columns={args?.columns} rows={args?.rows} />
+        <button hidden={updated} className="mt-2 mr-2 bg-indigo-500 text-white px-4 py-1 rounded-xl hover:bg-indigo-600 transition-all duration-300 cursor-pointer" onClick={() => {
+          debugger
+          respond?.("accepted")
+          setTableData({ columns: args?.columns || [], rows: args?.rows || [], date: new Date().toLocaleTimeString() })
+          setUpdated(true)
+          setTableTopic(args?.topic || "")
+        }}>
+          Approve
+        </button>
+        <button hidden={updated} className="mt-2 bg-red-500 text-white px-4 py-1 rounded-xl hover:bg-red-600 transition-all duration-300 cursor-pointer" onClick={() => {
+          respond?.("rejected")
+          setUpdated(true)
+        }}>
+          Reject
+        </button>
+      </>
+    },
+    // handler: (args) => {
+    // console.log(args, "argsargs");
+    // }
+  })
 
+  useCopilotChatSuggestions({
+    instructions : suggestions,
+    maxSuggestions : 3,
+    minSuggestions : 2
+  })
+
+  const { visibleMessages, appendMessage } = useCopilotChat()
+
+  useEffect(() => {
+    console.log(visibleMessages, "visibleMessages");
+  }, [visibleMessages])
 
   return (
     <div className="min-h-screen bg-indigo-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Panel */}
-        <div className="lg:col-span-2 flex flex-col gap-8 h-[90vh] overflow-y-auto">
+        <div className="lg:col-span-2 flex flex-col gap-8 h-[90vh] hide-scrollbar overflow-y-auto">
+          {(barChartTopic || tableTopic) ||
+            ((barChartData.data.length > 0) && (tableData.rows.length > 0)) ? (
+            <>
+              {/* {Bar Chart data} */}
+              {barChartTopic && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl font-semibold text-black">{barChartTopic}</span>
+                </div>
+                <div className="text-xs text-gray-700 mb-4">Generated {barChartData.date}</div>
+                {barChartData.data.length > 0 && <CustomBarChart data={barChartData.data} xKey={"x"} barKey={"y"} barLabel={barChartTopic} />}
+              </div>}
 
-
-          {/* {Bar Chart data} */}
-          {barChartTopic && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl font-semibold text-black">{barChartTopic}</span>
+              {/* {Table data} */}
+              {tableTopic && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl font-semibold text-black">{tableTopic}</span>
+                </div>
+                <div className="text-xs text-gray-700 mb-4">Generated {tableData.date}</div>
+                {tableData.columns.length > 0 && tableData.rows.length > 0 && <Table size="lg" className="bg-white" columns={tableData.columns} rows={tableData.rows} />}
+              </div>}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <span className="mb-4 text-md font-semibold">No visualization to see. Click any of the suggestions below.</span>
+              <ul className="space-y-2">
+                <li>
+                  <button
+                    disabled={isDisabled}
+                    className="px-5 py-2 rounded-full bg-indigo-50 text-gray-500 text-sm font-medium shadow-sm hover:bg-indigo-100 transition border border-indigo-100"
+                    onClick={() => {
+                      appendMessage(new TextMessage({
+                        content: "Get me the revenue data for Amazon Inc for the last 4 years and show it in a bar chart",
+                        role: Role.User
+                      }))
+                      setIsDisabled(true)
+                    }}
+                  >
+                    Show Amazon Revenue (Last 4 Years)
+                  </button>
+                </li>
+                <li>
+                  <button
+                    disabled={isDisabled}
+                    className="px-5 py-2 rounded-full bg-indigo-50 text-gray-500 text-sm font-medium shadow-sm hover:bg-indigo-100 transition border border-indigo-100"
+                    onClick={() => {
+                      appendMessage(new TextMessage({
+                        content: "Get me the top 10 stock performers and show it in a table",
+                        role: Role.User
+                      }))
+                      setIsDisabled(true)
+                    }}
+                  >
+                    Show Top 10 Stock Performers
+                  </button>
+                </li>
+                {/* Add more suggestions as needed */}
+              </ul>
             </div>
-            <div className="text-xs text-gray-700 mb-4">Generated {new Date().toLocaleTimeString()}</div>
-            {barChartData.length > 0 && <CustomBarChart data={barChartData} xKey={"x"} barKey={"y"} barLabel={barChartTopic} />}
-          </div>}
-          
-          {/* {Table data} */}
-          {tableTopic && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl font-semibold text-black">{tableTopic}</span>
-            </div>
-            <div className="text-xs text-gray-700 mb-4">Generated {new Date().toLocaleTimeString()}</div>
-            {tableData.columns.length > 0 && tableData.rows.length > 0 && <Table size="lg" className="bg-white" columns={tableData.columns} rows={tableData.rows} />}
-          </div>}
-
-
+          )}
 
           {/* Key Performance Indicators */}
           {/* <div className="bg-white rounded-xl shadow p-6 mt-2 border-t-4 border-indigo-500">
@@ -241,12 +228,12 @@ export default function Home() {
 
         {/* Right Panel */}
         <div className="flex flex-col gap-6">
-          <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-4 h-[90vh] border-t-4 border-indigo-500 overflow-y-auto">
-            <CopilotChat 
-            labels={{
-              initial : "Hi, I am a stock agent. I can help you analyze and compare different stocks. Please ask me anything about the stock market.",
-            }}
-            className="w-full h-full" />
+          <div className="bg-white rounded-xl shadow px-4 flex flex-col gap-4 h-[90vh] border-t-4 border-indigo-500 overflow-y-auto">
+            <CopilotChat
+              labels={{
+                initial: "Hi, I am a stock agent. I can help you analyze and compare different stocks. Please ask me anything about the stock market.",
+              }}
+              className="w-full h-full" />
           </div>
         </div>
       </div>

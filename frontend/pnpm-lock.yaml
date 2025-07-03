@@ -20,6 +20,9 @@ importers:
       '@copilotkit/runtime':
         specifier: ^1.9.1
         version: 1.9.1(@ag-ui/client@0.0.30)(@ag-ui/core@0.0.30)(@ag-ui/encoder@0.0.30)(@ag-ui/proto@0.0.30)(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-bedrock-agent-runtime@3.840.0)(@aws-sdk/client-bedrock-runtime@3.840.0)(@aws-sdk/client-kendra@3.840.0)(@aws-sdk/credential-provider-node@3.840.0)(@browserbasehq/sdk@2.6.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.53.2)(deepmerge@4.3.1)(dotenv@16.6.1)(openai@4.104.0(ws@8.18.3)(zod@3.25.67))(zod@3.25.67))(@ibm-cloud/watsonx-ai@1.6.8)(@smithy/util-utf8@2.3.0)(axios@1.10.0)(fast-xml-parser@4.4.1)(google-auth-library@8.9.0)(ibm-cloud-sdk-core@5.4.0)(jsonwebtoken@9.0.2)(playwright@1.53.2)(react@19.1.0)(weaviate-client@3.6.2)(ws@8.18.3)
+      '@copilotkit/runtime-client-gql':
+        specifier: ^1.9.1
+        version: 1.9.1(graphql@16.11.0)(react@19.1.0)
       next:
         specifier: 15.3.4
         version: 15.3.4(@playwright/test@1.53.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

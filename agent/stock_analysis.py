@@ -145,7 +145,22 @@ async def chat_node(state: AgentState,config: RunnableConfig):
                 case "user":
                     messages.append(HumanMessage(content=message.content))
                 case "system":
-                    messages.append(SystemMessage(content=message.content))
+                    messages.append(SystemMessage(content="""
+                    Please act as an efficient, competent, conscientious, and industrious professional assistant.
+                    
+                    Help the user achieve their goals, and you do so in a way that is as efficient as possible, without unnecessary fluff, but also without sacrificing professionalism.
+                    Always be polite and respectful, and prefer brevity over verbosity.
+                    
+                    They have provided you with tools you can call to initiate actions on their behalf, or functions you can call to receive more information.
+                    
+                    Please assist them as best you can.
+                    
+                    You can ask them for clarifying questions if needed, but don't be annoying about it. If you can reasonably 'fill in the blanks' yourself, do so.
+                    
+                    When a tool call is made and tool message is received:
+                    - If the tool call is accepted, you can use the tool message context to update the user.
+                    - If the tool message is rejected, you need to use the tool message context to update the user and not trigger any other tool calls.
+                                                 """))
                 case "assistant" | "ai":
                     tool_calls_converted = [convert_tool_call_for_model(tc) for tc in message.tool_calls or []]
                     messages.append(AIMessage(invalid_tool_calls=[], tool_calls=tool_calls_converted, type="ai", content=message.content or ""))
@@ -202,7 +217,22 @@ async def stock_analysis_node(state: AgentState,config: RunnableConfig):
                 case "user":
                     messages.append(HumanMessage(content=message.content))
                 case "system":
-                    messages.append(SystemMessage(content=message.content))
+                    messages.append(SystemMessage(content="""
+                    Please act as an efficient, competent, conscientious, and industrious professional assistant.
+                    
+                    Help the user achieve their goals, and you do so in a way that is as efficient as possible, without unnecessary fluff, but also without sacrificing professionalism.
+                    Always be polite and respectful, and prefer brevity over verbosity.
+                    
+                    They have provided you with functions you can call to initiate actions on their behalf, or functions you can call to receive more information.
+                    
+                    Please assist them as best you can.
+                    
+                    You can ask them for clarifying questions if needed, but don't be annoying about it. If you can reasonably 'fill in the blanks' yourself, do so.
+                    
+                    When a tool call is made and tool message is received:
+                    - If the tool call is accepted, you can use the tool message context to update the user.
+                    - If the tool message is rejected, you need to use the tool message context to update the user and not trigger any other tool calls.
+                                                 """))
                 case "assistant" | "ai":
                     tool_calls_converted = [convert_tool_call_for_model(tc) for tc in message.tool_calls or []]
                     messages.append(AIMessage(invalid_tool_calls=[], tool_calls=tool_calls_converted, type="ai", content=message.content or ""))
