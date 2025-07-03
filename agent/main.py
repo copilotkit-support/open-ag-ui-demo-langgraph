@@ -85,29 +85,29 @@ async def langgraph_agent(input_data : RunAgentInput):
             
             if state['messages'][-1].role == "assistant":
                 if state['messages'][-1].tool_calls:
-                    # for tool_call in state['messages'][-1].tool_calls:
-                    yield encoder.encode(
-                        ToolCallStartEvent(
-                            type=EventType.TOOL_CALL_START,
-                            tool_call_id=state['messages'][-1].tool_calls[0].id,
-                            toolCallName=state['messages'][-1].tool_calls[0].function.name,
+                    for tool_call in state['messages'][-1].tool_calls:
+                        yield encoder.encode(
+                            ToolCallStartEvent(
+                                type=EventType.TOOL_CALL_START,
+                                tool_call_id=tool_call.id,
+                                toolCallName=tool_call.function.name,
+                            )
                         )
-                    )
-                    
-                    yield encoder.encode(
-                        ToolCallArgsEvent(
-                            type=EventType.TOOL_CALL_ARGS,
-                            tool_call_id=state['messages'][-1].tool_calls[0].id,
-                            delta=state['messages'][-1].tool_calls[0].function.arguments
+                        
+                        yield encoder.encode(
+                            ToolCallArgsEvent(
+                                type=EventType.TOOL_CALL_ARGS,
+                                tool_call_id=tool_call.id,
+                                delta=tool_call.function.arguments
+                            )
                         )
-                    )
-                    
-                    yield encoder.encode(
-                        ToolCallEndEvent(
-                            type=EventType.TOOL_CALL_END,
-                            tool_call_id=state['messages'][-1].tool_calls[0].id,
+                        
+                        yield encoder.encode(
+                            ToolCallEndEvent(
+                                type=EventType.TOOL_CALL_END,
+                                    tool_call_id=tool_call.id,
+                            )
                         )
-                    )
                 else:        
                     yield encoder.encode(
                         TextMessageStartEvent(
