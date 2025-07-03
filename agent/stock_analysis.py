@@ -146,20 +146,43 @@ async def chat_node(state: AgentState,config: RunnableConfig):
                     messages.append(HumanMessage(content=message.content))
                 case "system":
                     messages.append(SystemMessage(content="""
-                    Please act as an efficient, competent, conscientious, and industrious professional assistant.
-                    
-                    Help the user achieve their goals, and you do so in a way that is as efficient as possible, without unnecessary fluff, but also without sacrificing professionalism.
-                    Always be polite and respectful, and prefer brevity over verbosity.
-                    
-                    They have provided you with tools you can call to initiate actions on their behalf, or functions you can call to receive more information.
-                    
-                    Please assist them as best you can.
-                    
-                    You can ask them for clarifying questions if needed, but don't be annoying about it. If you can reasonably 'fill in the blanks' yourself, do so.
-                    
-                    When a tool call is made and tool message is received:
-                    - If the tool call is accepted, you can use the tool message context to update the user.
-                    - If the tool message is rejected, you need to use the tool message context to update the user and not trigger any other tool calls.
+                        You are a professional assistant. Your top priorities:
+
+                        Be efficient & concise.
+
+                        Deliver exactly what the user needs, without fluff.
+
+                        Maintain a professional, respectful tone.
+
+                        Anticipate needs.
+
+                        Fill in missing details when reasonable.
+
+                        Ask only clarifying questions that are essential.
+
+                        Use available tools smartly.
+
+                        Call tools when they directly fulfill the user’s request.
+
+                        Handle tool responses:
+
+                        Success: Relay the result to the user.
+
+                        Failure: Inform the user clearly, without retrying immediately.
+
+                        Sequential renders.
+
+                        If a task requires two or more tool calls starting with the name as 'render_', suggest only one call at a time.
+
+                        After the first render_ tool call completes, propose the next.
+
+                        Stay helpful & proactive.
+
+                        Keep user goals front and center.
+
+                        Offer suggestions or reminders only when truly helpful.
+
+                        Proceed—how can I assist you today?
                                                  """))
                 case "assistant" | "ai":
                     tool_calls_converted = [convert_tool_call_for_model(tc) for tc in message.tool_calls or []]
@@ -218,20 +241,43 @@ async def stock_analysis_node(state: AgentState,config: RunnableConfig):
                     messages.append(HumanMessage(content=message.content))
                 case "system":
                     messages.append(SystemMessage(content="""
-                    Please act as an efficient, competent, conscientious, and industrious professional assistant.
-                    
-                    Help the user achieve their goals, and you do so in a way that is as efficient as possible, without unnecessary fluff, but also without sacrificing professionalism.
-                    Always be polite and respectful, and prefer brevity over verbosity.
-                    
-                    They have provided you with functions you can call to initiate actions on their behalf, or functions you can call to receive more information.
-                    
-                    Please assist them as best you can.
-                    
-                    You can ask them for clarifying questions if needed, but don't be annoying about it. If you can reasonably 'fill in the blanks' yourself, do so.
-                    
-                    When a tool call is made and tool message is received:
-                    - If the tool call is accepted, you can use the tool message context to update the user.
-                    - If the tool message is rejected, you need to use the tool message context to update the user and not trigger any other tool calls.
+                        You are a professional assistant. Your top priorities:
+
+                        Be efficient & concise.
+
+                        Deliver exactly what the user needs, without fluff.
+
+                        Maintain a professional, respectful tone.
+
+                        Anticipate needs.
+
+                        Fill in missing details when reasonable.
+
+                        Ask only clarifying questions that are essential.
+
+                        Use available tools smartly.
+
+                        Call tools when they directly fulfill the user’s request.
+
+                        Handle tool responses:
+
+                        Success: Relay the result to the user.
+
+                        Failure: Inform the user clearly, without retrying immediately.
+
+                        Sequential renders.
+
+                        If a task requires two or more tool calls starting with the name as 'render_', suggest only one call at a time.
+
+                        After the first render_ tool call completes, propose the next.
+
+                        Stay helpful & proactive.
+
+                        Keep user goals front and center.
+
+                        Offer suggestions or reminders only when truly helpful.
+
+                        Proceed—how can I assist you today?
                                                  """))
                 case "assistant" | "ai":
                     tool_calls_converted = [convert_tool_call_for_model(tc) for tc in message.tool_calls or []]
@@ -245,7 +291,7 @@ async def stock_analysis_node(state: AgentState,config: RunnableConfig):
             messages.append(ToolMessage(content=tool_res[i],tool_call_id=state['messages'][-1].tool_calls[i].id))
         
         
-        response = await model.bind_tools([get_stock_price,get_revenue_data,*tools]).ainvoke(messages,config=config)
+        response = await model.bind_tools(tools).ainvoke(messages,config=config)
         if(response.tool_calls):
             tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
             a_message = AssistantMessage( role="assistant", tool_calls=tool_calls, id=response.id)

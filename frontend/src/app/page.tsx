@@ -51,7 +51,7 @@ export default function Home() {
           debugger
           respond?.("accepted")
           setUpdated(true)
-          setBarChartData({ date: new Date().toLocaleDateString(), data: args?.data || [] })
+          setBarChartData({ date: new Date().toLocaleTimeString(), data: args?.data || [] })
           setBarChartTopic(args?.topic || "")
         }}>
           Approve
