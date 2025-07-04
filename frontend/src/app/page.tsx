@@ -1,6 +1,7 @@
 "use client"
 
 import { CopilotChat, useCopilotChatSuggestions } from "@copilotkit/react-ui";
+import "@copilotkit/react-ui/styles.css";
 import { Role, TextMessage } from "@copilotkit/runtime-client-gql";
 import { useEffect, useState } from "react";
 import { useCopilotAction, useCopilotChat } from "@copilotkit/react-core";
@@ -133,15 +134,15 @@ export default function Home() {
   }, [visibleMessages])
 
   return (
-    <div className="min-h-screen flex flex-col bg-indigo-50">
+    <div className="h-screen flex flex-col bg-indigo-50">
       {/* App Header - full width, topmost */}
       <header className="w-full bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-800 border-indigo-600 py-3 px-8 flex items-center opacity-90">
         <h1 className="text-xl font-semibold text-gray-300 tracking-tight">AI Stock Analyst</h1>
       </header>
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="w-full px-10 flex flex-col lg:flex-row gap-8">
-          {/* Left Panel */}
-          <div className="flex flex-col gap-8 h-[85vh] hide-scrollbar overflow-y-auto w-full lg:w-2/3">
+      <div className="flex-1 flex flex-col lg:flex-row">
+        {/* Left Panel */}
+        <div className="w-full lg:w-2/3 p-10 overflow-y-auto hide-scrollbar">
+          <div className="flex flex-col gap-8 h-full">
             {(barChartTopic || tableTopic) ||
               ((barChartData.data.length > 0) && (tableData.rows.length > 0)) ? (
               <>
@@ -201,46 +202,17 @@ export default function Home() {
                 </ul>
               </div>
             )}
-
-            {/* Key Performance Indicators */}
-            {/* <div className="bg-white rounded-xl shadow p-6 mt-2 border-t-4 border-indigo-500">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg font-semibold text-black">Key Performance Indicators</span>
-              </div>
-              <div className="text-xs text-gray-700 mb-4">Generated 12:57:24 pm</div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-indigo-50 rounded-lg p-4 flex flex-col items-start border border-indigo-100">
-                  <span className="text-xs text-black mb-1 font-medium">Total Revenue</span>
-                  <span className="text-2xl font-bold text-black">$9.07M</span>
-                  <span className="text-xs text-green-600 font-semibold mt-1">+12.5%</span>
-                  <span className="text-xs text-gray-700 mt-2">Quarterly revenue growth</span>
-                </div>
-                <div className="bg-indigo-50 rounded-lg p-4 flex flex-col items-start border border-indigo-100">
-                  <span className="text-xs text-black mb-1 font-medium">Active Users</span>
-                  <span className="text-2xl font-bold text-black">847K</span>
-                  <span className="text-xs text-green-600 font-semibold mt-1">+8.2%</span>
-                  <span className="text-xs text-gray-700 mt-2">Monthly active users</span>
-                </div>
-                <div className="bg-indigo-50 rounded-lg p-4 flex flex-col items-start border border-indigo-100">
-                  <span className="text-xs text-black mb-1 font-medium">Conversion Rate</span>
-                  <span className="text-2xl font-bold text-black">3.4%</span>
-                  <span className="text-xs text-red-600 font-semibold mt-1">-0.3%</span>
-                  <span className="text-xs text-gray-700 mt-2">Lead to customer conversion</span>
-                </div>
-              </div>
-            </div> */}
           </div>
+        </div>
 
-          {/* Right Panel */}
-          <div className="h-[85vh] flex flex-col gap-0 m-0 p-0 w-full lg:w-1/3">
-            <div className="bg-white shadow border-t-4 overflow-y-auto h-full rounded-none flex flex-col">
-              <CopilotChat
-                labels={{
-                  initial: "Hi, I am a stock agent. I can help you analyze and compare different stocks. Please ask me anything about the stock market.",
-                }}
-                className="w-full h-full" />
-            </div>
-          </div>
+        {/* Right Panel */}
+        <div className="lg:w-1/3">
+            <CopilotChat
+              labels={{
+                initial: "Hi, I am a stock agent. I can help you analyze and compare different stocks. Please ask me anything about the stock market.",
+              }}
+              className="h-full"
+            />
         </div>
       </div>
     </div>
