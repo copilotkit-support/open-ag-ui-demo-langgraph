@@ -139,7 +139,7 @@ export default function Home() {
       <header className="w-full bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-800 border-indigo-600 py-3 px-8 flex items-center opacity-90">
         <h1 className="text-xl font-semibold text-gray-300 tracking-tight">AI Stock Analyst</h1>
       </header>
-      <div className="flex-1 flex flex-col lg:flex-row">
+      <div className="flex-1 flex flex-col lg:flex-row" style={{ height: "100vh" }}>
         {/* Left Panel */}
         <div className="w-full lg:w-2/3 p-10 overflow-y-auto hide-scrollbar">
           <div className="flex flex-col gap-8 h-full">
