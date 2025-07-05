@@ -9,6 +9,7 @@ import Table from "@/components/table";
 import CustomBarChart from "@/components/bar-chart";
 import { suggestions } from "@/utils/prompts";
 import ToolLog from "@/components/tool-log";
+import DotLoader from "@/components/dot-loader";
 export default function Home() {
   const [tableData, setTableData] = useState<{ columns: string[], rows: { row_data: (string | number)[] }[], date: string }>({ columns: [], rows: [], date: "" });
   const [tableTopic, setTableTopic] = useState<string>("");
@@ -65,6 +66,7 @@ export default function Home() {
         }}>
           Reject
         </button>
+        {(status === "inProgress" || status === "executing") && <DotLoader />}
       </>
     }
   })
@@ -116,6 +118,7 @@ export default function Home() {
         }}>
           Reject
         </button>
+        {(status === "inProgress" || status === "executing") && <DotLoader />}
       </>
     },
     // handler: (args) => {
@@ -127,7 +130,7 @@ export default function Home() {
     name: "langgraphAgent",
     render: ({ state, status, nodeName }) => {
       console.log(state, status, nodeName, "state");
-      return (state.items.length > 0 ? <ToolLog state={state.items} /> : <></>)
+      return (state.items.length > 0 ? <ToolLog state={state.items} /> : status === "inProgress" ? <DotLoader /> : <></>)
     }
   })
 

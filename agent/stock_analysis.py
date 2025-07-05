@@ -44,24 +44,28 @@ def convert_tool_call_for_model(tc):
     
 async def get_stock_price_tool(tickers: list[str], config: RunnableConfig) -> str:
     try:
-        # config.get("configurable").get("emit_event")(
-        #     StateDeltaEvent(
-        #         type=EventType.STATE_DELTA,
-        #         delta=[
-        #             {
-        #                 "op": "replace",
-        #                 "path": "/toolName",
-        #                 "value": "get_stock_price"
-        #             },
-        #             {
-        #                 "op": "replace",
-        #                 "path": "/status",
-        #                 "value": "inProgress"
-        #             }
-        #         ]
-        #     )
-        # )
+        config.get("configurable").get("tool_logs")["items"].append({
+            "toolName": "GET_STOCK_PRICE",
+            "status": "inProgress"
+        })
+        config.get("configurable").get("emit_event")(
+            StateDeltaEvent(
+                type=EventType.STATE_DELTA,
+                delta=[
+                    {
+                        "op": "add",
+                        "path": "/items/-",
+                        "value": {
+                            "toolName": "GET_STOCK_PRICE",
+                            "status": "inProgress"
+                        }
+                    }
+                ]
+            )
+        )
         await asyncio.sleep(0)
+        
+        
         tickers_list = json.loads(tickers)['tickers']
         tikers = [yf.Ticker(ticker) for ticker in tickers_list]
         results = []
@@ -80,24 +84,19 @@ async def get_stock_price_tool(tickers: list[str], config: RunnableConfig) -> st
                 "company_name": company_name,
                 "revenue": revenue
             })
-        
-        # config.get("configurable").get("emit_event")(
-        #     StateDeltaEvent(
-        #         type=EventType.STATE_DELTA,
-        #         delta=[
-        #             {
-        #                 "op": "replace",
-        #                 "path": "/toolName",
-        #                 "value": "get_stock_price"
-        #             },
-        #             {
-        #                 "op": "replace",
-        #                 "path": "/status",
-        #                 "value": "completed"
-        #             }
-        #         ]
-        #     )
-        # )
+        index = len(config.get("configurable").get("tool_logs")["items"]) - 1
+        config.get("configurable").get("emit_event")(
+            StateDeltaEvent(
+                type=EventType.STATE_DELTA,
+                delta=[
+                    {
+                        "op": "replace",
+                        "path": f"/items/{index}/status",
+                        "value": "completed"
+                    }
+                ]
+            )
+        )
         await asyncio.sleep(0)
         return {"results": results}
     except Exception as e:
@@ -106,23 +105,26 @@ async def get_stock_price_tool(tickers: list[str], config: RunnableConfig) -> st
     
 async def get_revenue_data_tool(tickers: list[str], config: RunnableConfig) -> str:
     try:
-        # config.get("configurable").get("emit_event")(
-        #     StateDeltaEvent(
-        #         type=EventType.STATE_DELTA,
-        #         delta=[
-        #             {
-        #                 "op": "replace",
-        #                 "path": "/toolName",
-        #                 "value": "get_revenue_data"
-        #             },
-        #             {
-        #                 "op": "replace",
-        #                 "path": "/status",
-        #                 "value": "inProgress"
-        #             }
-        #         ]
-        #     )
-        # )
+        config.get("configurable").get("tool_logs")["items"].append({
+            "toolName": "GET_REVENUE_DATA",
+            "status": "inProgress"
+        })
+        config.get("configurable").get("emit_event")(
+            StateDeltaEvent(
+                type=EventType.STATE_DELTA,
+                delta=[
+                    {
+                        "op": "add",
+                        "path": "/items/-",
+                        "value": {
+                            "toolName": "GET_REVENUE_DATA",
+                            "status": "inProgress"
+                        }
+                    }
+                ]
+            )
+        )
+        await asyncio.sleep(0)
         await asyncio.sleep(0)
         tickers_list = json.loads(tickers)['tickers']
         tikers = [yf.Ticker(ticker) for ticker in tickers_list]
@@ -149,23 +151,19 @@ async def get_revenue_data_tool(tickers: list[str], config: RunnableConfig) -> s
                 "company_name": company_name,
                 "revenue_by_year": revenue_dict
             })
-        # config.get("configurable").get("emit_event")(
-        #     StateDeltaEvent(
-        #         type=EventType.STATE_DELTA,
-        #         delta=[
-        #             {
-        #                 "op": "replace",
-        #                 "path": "/toolName",
-        #                 "value": "get_revenue_data"
-        #             },
-        #             {
-        #                 "op": "replace",
-        #                 "path": "/status",
-        #                 "value": "completed"
-        #             }
-        #         ]
-        #     )
-        # )
+        index = len(config.get("configurable").get("tool_logs")["items"]) - 1
+        config.get("configurable").get("emit_event")(
+            StateDeltaEvent(
+                type=EventType.STATE_DELTA,
+                delta=[
+                    {
+                        "op": "replace",
+                        "path": f"/items/{index}/status",
+                        "value": "completed"
+                    }
+                ]
+            )
+        )
         await asyncio.sleep(0)
         return json.dumps({"results": results})
     except Exception as e:
@@ -266,75 +264,75 @@ get_revenue_data = {
 async def chat_node(state: AgentState,config: RunnableConfig):
     # print(state)
     try:
-        config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "add",
-                        "path": "/items/-",
-                        "value": {
-                            "toolName": "TOOL1",
-                            "status": "inProgress"
-                        }
-                    }
-                ]
-            )
-        )
-        await asyncio.sleep(3)
+        # config.get("configurable").get("emit_event")(
+        #     StateDeltaEvent(
+        #         type=EventType.STATE_DELTA,
+        #         delta=[
+        #             {
+        #                 "op": "add",
+        #                 "path": "/items/-",
+        #                 "value": {
+        #                     "toolName": "TOOL1",
+        #                     "status": "inProgress"
+        #                 }
+        #             }
+        #         ]
+        #     )
+        # )
+        # await asyncio.sleep(3)
         
-        config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "replace",
-                        "path": "/items/0/toolName",
-                        "value": "TOOL1"
-                    },
-                    {
-                        "op": "replace",
-                        "path": "/items/0/status",
-                        "value": "completed"
-                    }
-                ]
-            )
-        )
-        await asyncio.sleep(3)
-        config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "add",
-                        "path": "/items/-",
-                        "value": {
-                            "toolName": "TOOL2",
-                            "status": "inProgress"
-                        }
-                    }
-                ]
-            )
-        )
-        await asyncio.sleep(3)
-        config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "replace",
-                        "path": "/items/1/toolName",
-                        "value": "TOOL2"
-                    },
-                    {
-                        "op": "replace",
-                        "path": "/items/1/status",
-                        "value": "completed"
-                    }
-                ]
-            )
-        )
-        await asyncio.sleep(3)
+        # config.get("configurable").get("emit_event")(
+        #     StateDeltaEvent(
+        #         type=EventType.STATE_DELTA,
+        #         delta=[
+        #             {
+        #                 "op": "replace",
+        #                 "path": "/items/0/toolName",
+        #                 "value": "TOOL1"
+        #             },
+        #             {
+        #                 "op": "replace",
+        #                 "path": "/items/0/status",
+        #                 "value": "completed"
+        #             }
+        #         ]
+        #     )
+        # )
+        # await asyncio.sleep(3)
+        # config.get("configurable").get("emit_event")(
+        #     StateDeltaEvent(
+        #         type=EventType.STATE_DELTA,
+        #         delta=[
+        #             {
+        #                 "op": "add",
+        #                 "path": "/items/-",
+        #                 "value": {
+        #                     "toolName": "TOOL2",
+        #                     "status": "inProgress"
+        #                 }
+        #             }
+        #         ]
+        #     )
+        # )
+        # await asyncio.sleep(3)
+        # config.get("configurable").get("emit_event")(
+        #     StateDeltaEvent(
+        #         type=EventType.STATE_DELTA,
+        #         delta=[
+        #             {
+        #                 "op": "replace",
+        #                 "path": "/items/1/toolName",
+        #                 "value": "TOOL2"
+        #             },
+        #             {
+        #                 "op": "replace",
+        #                 "path": "/items/1/status",
+        #                 "value": "completed"
+        #             }
+        #         ]
+        #     )
+        # )
+        # await asyncio.sleep(3)
         model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
         tools = [t.dict() for t in state['tools']]
         messages = []
