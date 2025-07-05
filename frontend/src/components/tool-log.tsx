@@ -1,12 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 
-interface ToolLog {
+interface ToolLogInterface {
     toolName: string;
     status: "inProgress" | "completed";
 }
 
 interface ToolLogProps {
-    state: ToolLog[];
+    state: ToolLogInterface[];
 }
 
 const LoaderText: React.FC<{ text: string }> = ({ text }) => (
@@ -56,7 +56,10 @@ const StatusTag: React.FC<{ status: "inProgress" | "completed" }> = ({ status })
 );
 
 const ToolLog: React.FC<ToolLogProps> = ({ state }) => {
-
+    useEffect(() => {
+        console.log(state, "stateInsideToolLog");
+        console.log(state.reverse(), "stateInsideToolLogReverse");
+    }, [state])
     return (
         <>
             {state.reverse().map((item) => (
