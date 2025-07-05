@@ -62,7 +62,7 @@ const ToolLog: React.FC<ToolLogProps> = ({ state }) => {
     }, [state])
     return (
         <>
-            {state.reverse().map((item) => (
+            {state.map((item) => (
                 <div
                     className={`mt-2 flex items-center justify-between gap-2 px-4 py-2 rounded-lg shadow border transition-all duration-300 pl-8
          ${item.status === "completed" ? "border-indigo-500 bg-white border-r-4" : ""}
