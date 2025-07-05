@@ -4,16 +4,19 @@ import { CopilotChat, useCopilotChatSuggestions } from "@copilotkit/react-ui";
 import "@copilotkit/react-ui/styles.css";
 import { Role, TextMessage } from "@copilotkit/runtime-client-gql";
 import { useEffect, useState } from "react";
-import { useCopilotAction, useCopilotChat } from "@copilotkit/react-core";
+import { useCoAgentStateRender, useCopilotAction, useCopilotChat } from "@copilotkit/react-core";
 import Table from "@/components/table";
 import CustomBarChart from "@/components/bar-chart";
 import { suggestions } from "@/utils/prompts";
+import ToolLog from "@/components/tool-log";
+import DotLoader from "@/components/dot-loader";
 export default function Home() {
   const [tableData, setTableData] = useState<{ columns: string[], rows: { row_data: (string | number)[] }[], date: string }>({ columns: [], rows: [], date: "" });
   const [tableTopic, setTableTopic] = useState<string>("");
   const [barChartData, setBarChartData] = useState<{ date: string, data: { x: string, y: number }[] }>({ date: "", data: [] });
   const [barChartTopic, setBarChartTopic] = useState<string>("");
   const [isDisabled, setIsDisabled] = useState<boolean>(false);
+  const { visibleMessages, appendMessage } = useCopilotChat()
 
   useCopilotAction({
     name: "render_bar_chart",
@@ -63,6 +66,7 @@ export default function Home() {
         }}>
           Reject
         </button>
+        {(status === "inProgress" || status === "executing") && <DotLoader />}
       </>
     }
   })
@@ -114,6 +118,7 @@ export default function Home() {
         }}>
           Reject
         </button>
+        {(status === "inProgress" || status === "executing") && <DotLoader />}
       </>
     },
     // handler: (args) => {
@@ -121,13 +126,21 @@ export default function Home() {
     // }
   })
 
+  useCoAgentStateRender({
+    name: "langgraphAgent",
+    render: ({ state, status, nodeName }) => {
+      console.log(state, status, nodeName, "state");
+      return (state.items.length > 0 ? <ToolLog state={state.items} /> : status === "inProgress" ? <DotLoader /> : <></>)
+    }
+  })
+
+
   useCopilotChatSuggestions({
     instructions: suggestions,
     maxSuggestions: 3,
     minSuggestions: 2
   })
 
-  const { visibleMessages, appendMessage } = useCopilotChat()
 
   useEffect(() => {
     console.log(visibleMessages, "visibleMessages");

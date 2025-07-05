@@ -6,10 +6,11 @@ from typing import Dict, List, Any, Optional
 import os
 import uvicorn
 import asyncio
-from ag_ui.core import (RunAgentInput, Message, EventType, RunStartedEvent, RunFinishedEvent, TextMessageStartEvent, TextMessageEndEvent, TextMessageContentEvent, ToolCallStartEvent, ToolCallEndEvent, ToolCallArgsEvent)
+from ag_ui.core import (RunAgentInput, Message, StateSnapshotEvent, EventType, RunStartedEvent, RunFinishedEvent, TextMessageStartEvent, TextMessageEndEvent, TextMessageContentEvent, ToolCallStartEvent, ToolCallEndEvent, ToolCallArgsEvent)
 from ag_ui.encoder import EventEncoder
 from stock_analysis import agent_graph
 from copilotkit import CopilotKitState
+from datetime import datetime
 
 app = FastAPI()
 
@@ -67,11 +68,23 @@ async def langgraph_agent(input_data : RunAgentInput):
                 run_id=input_data.run_id
             )
             )
+            
+            yield encoder.encode(
+            StateSnapshotEvent(
+                type=EventType.STATE_SNAPSHOT,
+                snapshot={
+                    "items": []
+                }
+            )
+            )
+            tool_logs = {
+                "items": []
+            }
             state = AgentState(tools=input_data.tools, messages = input_data.messages) 
             agent = await agent_graph()
                 
             agent_task = asyncio.create_task(
-                    agent.ainvoke(state, config={"emit_event": emit_event, "message_id": message_id})
+                    agent.ainvoke(state, config={"emit_event": emit_event, "message_id": message_id, "tool_logs": tool_logs})
                 )
             while True:
                 try:
@@ -82,7 +95,14 @@ async def langgraph_agent(input_data : RunAgentInput):
                     if agent_task.done():
                         break
                     
-            
+            yield encoder.encode(
+            StateSnapshotEvent(
+                type=EventType.STATE_SNAPSHOT,
+                snapshot={
+                    "items": []
+                }
+            )
+            )
             if state['messages'][-1].role == "assistant":
                 if state['messages'][-1].tool_calls:
                     # for tool_call in state['messages'][-1].tool_calls:
