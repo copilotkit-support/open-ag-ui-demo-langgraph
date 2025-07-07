@@ -15,6 +15,9 @@ import yfinance as yf
 import pandas as pd
 import requests
 import asyncio
+from langchain.prompts import PromptTemplate
+from langchain.agents import initialize_agent, AgentType
+from langchain.tools import Tool
 load_dotenv()
 class AgentState(CopilotKitState):
     """
@@ -259,190 +262,28 @@ get_revenue_data = {
     }
 }
 
+react_prompt = PromptTemplate(
+    input_variables=["input", "agent_scratchpad"],
+    template="""
+You are a professional financial assistant. Your job is to answer user questions about stocks and companies using the tools at your disposal.
 
-async def chat_node(state: AgentState,config: RunnableConfig):
-    try:
-       
-        model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
-        tools = [t.dict() for t in state['tools']]
-        messages = []
-        for message in state['messages']:
-            match message.role:
-                case "user":
-                    messages.append(HumanMessage(content=message.content))
-                case "system":
-                    messages.append(SystemMessage(content="""
-You are a professional financial assistant. Your core priorities:
+When you need to look up information, use the tools. Think step by step, and after each action, observe the result before continuing.
 
-**INTELLIGENCE & EFFICIENCY**
-- Be efficient & concise
-- Deliver exactly what the user needs, without fluff
-- Maintain a professional, respectful tone
-- Anticipate needs and fill in missing details when reasonable
-- Evenif the user say top stocks from a sector, then assume the top companies and tickers that are in that sector based on your knowledge and call the tools to get the data. Dont ask the user for clarification. They will mentiont he changes if they want to.
+Question: {input}
 
-**AUTONOMOUS COMPANY DETECTION (CRITICAL)**
-- Automatically identify companies from user queries without asking for clarification
-- Map company names to correct ticker symbols (e.g., "Apple" → AAPL, "Microsoft" → MSFT, "Tesla" → TSLA)
-- Handle common variations: abbreviations, informal names, subsidiaries
-- If the user mention a sector or more general term, then based on your knowledge of the stock market, assume the companies and tickers that are in that sector and call the tools to get the data. Dont ask the user for clarification.
-- If the user mentions an ambiguous term, then assuem the companies in that sector based on your knowledge and do the tool calls. As much as possible, dont ask the user for clarification, and deduct the companies and tickers yourself.
-- For ambiguous references, use the most likely/prominent company match
-- Evenif the user say top stocks from a sector, then assume the top companies and tickers that are in that sector based on your knowledge and call the tools to get the data. Dont ask the user for clarification. They will mentiont he changes if they want to.
+{agent_scratchpad}
+""")
 
-**FINANCIAL DATA HANDLING**
-- Call stock data tools immediately when company is identified
-- Use proper ticker symbols in tool calls
-- Provide relevant financial context and analysis with raw data
+llm = ChatOpenAI(model="gemini-2.0-flash", model_provider="google_genai")
 
-**TOOL USAGE**
-- Use available tools smartly, especially for charts, tables, and data visualization
-- Handle responses: Success → relay results; Failure → inform clearly without immediate retry
-- Sequential renders: For multiple render_ tools, suggest one at a time
+tools = [get_stock_price, get_revenue_data]
 
-**EXAMPLES OF EXPECTED BEHAVIOR**
-- Query: "How's Apple doing?" → Detect AAPL, call stock tools, provide data
-- Query: "Compare Tesla and Ford" → Identify TSLA & F, get both datasets
-- Query: "Microsoft earnings" → Recognize MSFT, fetch earnings data
+agent = initialize_agent(
+    tools=tools,
+    llm=llm,
+    agent=AgentType.REACT_DESCRIPTION,
+    verbose=True,
+    prompt=react_prompt
+)
 
-Stay proactive and keep user goals central. Proceed with intelligent financial assistance.
-"""))
-                case "assistant" | "ai":
-                    tool_calls_converted = [convert_tool_call_for_model(tc) for tc in message.tool_calls or []]
-                    messages.append(AIMessage(invalid_tool_calls=[], tool_calls=tool_calls_converted, type="ai", content=message.content or ""))
-                case "tool":
-                    # ToolMessage may require additional fields, adjust as needed
-                    messages.append(ToolMessage(tool_call_id = message.tool_call_id, content=message.content))
-                case _:
-                    raise ValueError(f"Unsupported message role: {message.role}")
-        
-        response = await model.bind_tools([get_stock_price,get_revenue_data,*tools]).ainvoke(messages,config=config)
-        if(response.tool_calls):
-            if(('get' in response.tool_calls[0]['name'])):
-                tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
-                a_message = AssistantMessage( role="assistant", tool_calls=tool_calls, id=response.id)
-                state['messages'].append(a_message)
-                return Command(
-                    goto="stock_analysis",
-                )
-            else:
-                tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
-                a_message = AssistantMessage( role="assistant", tool_calls=tool_calls, id=response.id)
-                state['messages'].append(a_message)
-        else:
-            a_message = AssistantMessage(id=response.id,content=response.content,role="assistant")
-            state['messages'].append(a_message)
-        print("hello")
-    except Exception as e:
-        print(e)
-        return Command(
-            goto="end",
-        )
-    return Command(
-        goto="end",
-    )
-
-async def stock_analysis_node(state: AgentState,config: RunnableConfig):
     
-    print("inside stock analysis node")
-    model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
-    tools = [t.dict() for t in state['tools']]
-    
-    if(state['messages'][-1].tool_calls ):
-        tool_res = []
-        for i in range(len(state['messages'][-1].tool_calls)):
-            
-            if(state['messages'][-1].tool_calls[i].function.name == "get_stock_price"):
-                tool_res.append(await get_stock_price_tool(state['messages'][-1].tool_calls[i].function.arguments,config))
-            elif(state['messages'][-1].tool_calls[i].function.name == "get_revenue_data"):
-                tool_res.append(await get_revenue_data_tool(state['messages'][-1].tool_calls[i].function.arguments,config))
-        
-        messages = []
-        for message in state['messages']:
-            match message.role:
-                case "user":
-                    messages.append(HumanMessage(content=message.content))
-                case "system":
-                    messages.append(SystemMessage(content="""
-You are a professional financial assistant. Your core priorities:
-
-**INTELLIGENCE & EFFICIENCY**
-- Be efficient & concise
-- Deliver exactly what the user needs, without fluff
-- Maintain a professional, respectful tone
-- Anticipate needs and fill in missing details when reasonable
-
-**AUTONOMOUS COMPANY DETECTION (CRITICAL)**
-- Automatically identify companies from user queries without asking for clarification
-- Map company names to correct ticker symbols (e.g., "Apple" → AAPL, "Microsoft" → MSFT, "Tesla" → TSLA)
-- Handle common variations: abbreviations, informal names, subsidiaries
-- If the user mention a sector or more general term, then based on your knowledge of the stock market, assume the companies and tickers that are in that sector and call the tools to get the data. Dont ask the user for clarification.
-- If the user mentions an ambiguous term, then assuem the companies in that sector based on your knowledge and do the tool calls. As much as possible, dont ask the user for clarification, and deduct the companies and tickers yourself.
-- For ambiguous references, use the most likely/prominent company match
-- Evenif the user say top stocks from a sector, then assume the top companies and tickers that are in that sector based on your knowledge and call the tools to get the data. Dont ask the user for clarification. They will mentiont he changes if they want to.
-
-**FINANCIAL DATA HANDLING**
-- Call stock data tools immediately when company is identified
-- Use proper ticker symbols in tool calls
-- Provide relevant financial context and analysis with raw data
-
-**TOOL USAGE**
-- Use available tools smartly, especially for charts, tables, and data visualization
-- Handle responses: Success → relay results; Failure → inform clearly without immediate retry
-- Sequential renders: For multiple render_ tools, suggest one at a time
-- Always use the provided visual tools to show the data to the user. Just use the tools directly, overuse of these tools are what is expected.
-- IMPORTANT: Dont ask the user to render the data, just use the tools like Bar chart and table directly. 
-                                                   
-**EXAMPLES OF EXPECTED BEHAVIOR**
-- Query: "How's Apple doing?" → Detect AAPL, call stock tools, provide data
-- Query: "Compare Tesla and Ford" → Identify TSLA & F, get both datasets
-- Query: "Microsoft earnings" → Recognize MSFT, fetch earnings data
-
-Stay proactive and keep user goals central. Proceed with intelligent financial assistance."""))
-                case "assistant" | "ai":
-                    tool_calls_converted = [convert_tool_call_for_model(tc) for tc in message.tool_calls or []]
-                    messages.append(AIMessage(invalid_tool_calls=[], tool_calls=tool_calls_converted, type="ai", content=message.content or ""))
-                case "tool":
-                    # ToolMessage may require additional fields, adjust as needed
-                    messages.append(ToolMessage(tool_call_id = message.tool_call_id, content=message.content))
-                case _:
-                    raise ValueError(f"Unsupported message role: {message.role}")
-        for i in range(len(tool_res)):
-            messages.append(ToolMessage(content=tool_res[i],tool_call_id=state['messages'][-1].tool_calls[i].id))
-        
-        
-        response = await model.bind_tools(tools).ainvoke(messages,config=config)
-        if(response.tool_calls):
-            tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
-            a_message = AssistantMessage( role="assistant", tool_calls=tool_calls, id=response.id)
-            state['messages'].append(a_message)
-        else:
-            a_message = AssistantMessage(id=response.id,content=response.content,role="assistant")
-            state['messages'].append(a_message)
-        
-    return Command(
-        goto="end",
-    )
-
-async def end_node(state: AgentState,config: RunnableConfig):
-    print("inside end node")
-    
-
-async def agent_graph():
-    workflow = StateGraph(AgentState)
-    workflow.add_node("chat", chat_node)
-    workflow.add_node("stock_analysis", stock_analysis_node)
-    workflow.add_node("end", end_node)
-    workflow.set_entry_point("chat")
-    workflow.set_finish_point("end")
-    
-    workflow.add_edge(START, "chat")
-    workflow.add_edge("chat", "stock_analysis")
-    workflow.add_edge("stock_analysis", "end")
-    workflow.add_edge("chat", "end")
-    workflow.add_edge("end", END)
-    
-    # from langgraph.checkpoint.memory import MemorySaver
-    # graph = workflow.compile(MemorySaver())
-    graph = workflow.compile()
-    return graph
