@@ -25,34 +25,7 @@ class AgentState(CopilotKitState):
 @app.post("/langgraph-agent")
 async def langgraph_agent(input_data : RunAgentInput):
     try:
-        async def event_generator():
-        # if input_data.messages[-1].role == "tool":
-        #     # Step 1: Find the last assistant message
-        #     last_assistant_message = None
-        #     for msg in reversed(input_data.messages):
-        #         if msg.role == "assistant":
-        #             last_assistant_message = msg
-        #             break
-
-        #     if last_assistant_message is None or not hasattr(last_assistant_message, "tool_calls"):
-        #         # No assistant message or no tool_calls, stop execution
-        #         return
-
-        #     num_tool_calls = len(last_assistant_message.tool_calls)
-
-        #     # Step 2: Count consecutive tool messages at the end
-        #     num_tool_messages = 0
-        #     for msg in reversed(input_data.messages):
-        #         if msg.role == "tool":
-        #             num_tool_messages += 1
-        #         else:
-        #             break
-
-        #     # Step 3: Compare counts
-        #     if num_tool_messages != num_tool_calls:
-        #         # Not all tool calls have been responded to, stop execution
-        #         return
-        
+        async def event_generator():        
             encoder = EventEncoder()
             event_queue = asyncio.Queue()
 

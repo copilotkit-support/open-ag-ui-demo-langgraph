@@ -1,1 +1,2 @@
 export const suggestions = 'You are a stock analyst agent. Provide suggestions to the user like Get the Top 10 stocks in the Energy sector, Get the top stock performer in Tech sector'
+export const initialMessage = "Hi, I am a stock agent. I can help you analyze and compare different stocks. Please ask me anything about the stock market.\n\nI have capabilities to fetch historical data of stocks, revenue, and also compare companies performances."

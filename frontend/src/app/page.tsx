@@ -7,15 +7,36 @@ import { useEffect, useState } from "react";
 import { useCoAgentStateRender, useCopilotAction, useCopilotChat } from "@copilotkit/react-core";
 import Table from "@/components/table";
 import CustomBarChart from "@/components/bar-chart";
-import { suggestions } from "@/utils/prompts";
+import { initialMessage, suggestions } from "@/utils/prompts";
 import ToolLog from "@/components/tool-log";
 import DotLoader from "@/components/dot-loader";
+import CustomLineChart from "@/components/line-chart";
+
+interface TableData {
+  topic: string;
+  type: "table";
+  columns: string[];
+  rows: { row_data: (string | number)[] }[];
+  date: string;
+}
+
+interface BarChartData {
+  topic: string;
+  type: "barChart";
+  date: string;
+  data: { x: string, y: number }[];
+}
+
+interface LineChartData {
+  topic: string;
+  type: "lineChart";
+  date: string;
+  xArr: string[];
+  items: any[];
+}
+
 export default function Home() {
-  const [tableData, setTableData] = useState<{ columns: string[], rows: { row_data: (string | number)[] }[], date: string }>({ columns: [], rows: [], date: "" });
-  const [tableTopic, setTableTopic] = useState<string>("");
-  const [barChartData, setBarChartData] = useState<{ date: string, data: { x: string, y: number }[] }>({ date: "", data: [] });
-  const [barChartTopic, setBarChartTopic] = useState<string>("");
-  const [isDisabled, setIsDisabled] = useState<boolean>(false);
+  const [data, setData] = useState<(BarChartData | TableData | LineChartData)[] | []>([]);
   const { visibleMessages, appendMessage } = useCopilotChat()
 
   useCopilotAction({
@@ -52,11 +73,11 @@ export default function Home() {
         {/* @ts-ignore */}
         <CustomBarChart data={args?.data} barLabel={args?.topic} />
         <button hidden={updated} className="mt-2 mr-2 bg-indigo-500 text-white px-4 py-1 rounded-xl hover:bg-indigo-600 transition-all duration-300 cursor-pointer" onClick={() => {
-          debugger
+
           respond?.("accepted")
           setUpdated(true)
-          setBarChartData({ date: new Date().toLocaleTimeString(), data: args?.data || [] })
-          setBarChartTopic(args?.topic || "")
+
+          setData([...data, { type: "barChart", topic: args?.topic || "", date: new Date().toLocaleTimeString(), data: args?.data || [] }])
         }}>
           Approve
         </button>
@@ -104,11 +125,10 @@ export default function Home() {
         {/* @ts-ignore */}
         <Table size="sm" columns={args?.columns} rows={args?.rows} />
         <button hidden={updated} className="mt-2 mr-2 bg-indigo-500 text-white px-4 py-1 rounded-xl hover:bg-indigo-600 transition-all duration-300 cursor-pointer" onClick={() => {
-          debugger
+
           respond?.("accepted")
-          setTableData({ columns: args?.columns || [], rows: args?.rows || [], date: new Date().toLocaleTimeString() })
+          setData([...data, { type: "table", topic: args?.topic || "", columns: args?.columns || [], rows: args?.rows || [], date: new Date().toLocaleTimeString() }])
           setUpdated(true)
-          setTableTopic(args?.topic || "")
         }}>
           Approve
         </button>
@@ -121,15 +141,96 @@ export default function Home() {
         {(status === "inProgress" || status === "executing") && <DotLoader />}
       </>
     },
-    // handler: (args) => {
-    // console.log(args, "argsargs");
-    // }
+  })
+  useCopilotAction({
+    name: "render_line_chart",
+    description: `Render a Line-chart based on the given data. Example input format: [[{"name": "2021", "value": 566,accessorKey : "APPL"}, {"name": "2022", "value": 20,accessorKey : "APPL"}, {"name": "2023", "value": 30,accessorKey : "APPL"}],[{"name": "2021", "value": 10,accessorKey : "GOOG"}, {"name": "2022", "value": 20,accessorKey : "GOOG"}, {"name": "2023", "value": 30,accessorKey : "GOOG"}]]. If dates are present convert them to the format "YYYY". Also if name length is long, provide short name for the item in the input. For example, If the name is Jon.snow@got.com, then the short name is Jon`,
+    parameters: [
+      {
+        name: "items",
+        type: "object[]",
+        description: "The data to be displayed in the line chart",
+        required: true,
+        items: {
+          type: "object",
+          attributes: [
+            {
+              name: "name",
+              type: "string",
+              description: "The name of the item or stock",
+              required: true
+            },
+            {
+              name: "value",
+              type: "number",
+              description: "The value of the item or stock",
+              required: true
+            },
+            {
+              name: "accessorKey",
+              type: "string",
+              description: "The accessor key of the item. It can be the author name or the repository name or the branch name or the status name or the date just value.",
+              required: true
+            }
+          ]
+        }
+      },
+      {
+        name: "topic",
+        type: "string",
+        description: "The topic of the line chart that needs to be rendered",
+        required: true
+      }
+    ],
+    renderAndWaitForResponse: ({ args, respond, status }: any) => {
+      console.log(args, "lineargs");
+      const [updated, setUpdated] = useState(false);
+      const [xarr, setXarr] = useState<string[]>([])
+      const [chartData, setChartData] = useState<any[]>([])
+      useEffect(() => {
+        setXarr(args?.items?.map((item: any) => item[0]?.accessorKey));
+        const chartVals = [];
+        const numMonths = args?.items[0]?.length || 0;
+        const numStocks = args?.items.length;
+
+        for (let i = 0; i < numMonths; i++) {
+          const entry: any = {};
+          for (let j = 0; j < numStocks; j++) {
+            const stock = args?.items[j][i];
+            entry[stock.accessorKey] = stock.value;
+            entry.name = stock.name;
+          }
+          chartVals.push(entry);
+        }
+        console.log(chartVals, "chartVals")
+        setChartData(chartVals);
+      }, [args?.items])
+      return <>
+        <CustomLineChart data={chartData} xarr={xarr} />
+        <button hidden={updated} className="mt-2 mr-2 bg-indigo-500 text-white px-4 py-1 rounded-xl hover:bg-indigo-600 transition-all duration-300 cursor-pointer" onClick={() => {
+
+          respond?.("accepted")
+          setData([...data, { type: "lineChart", topic: args?.topic || "", items: chartData || [], date: new Date().toLocaleTimeString(), xArr: xarr }])
+          setUpdated(true)
+        }}>
+          Approve
+        </button>
+        <button hidden={updated} className="mt-2 bg-red-500 text-white px-4 py-1 rounded-xl hover:bg-red-600 transition-all duration-300 cursor-pointer" onClick={() => {
+          respond?.("rejected")
+          setUpdated(true)
+        }}>
+          Reject
+        </button>
+        {(status === "inProgress" || status === "executing") && <DotLoader />}
+      </>
+
+    }
   })
 
   useCoAgentStateRender({
     name: "langgraphAgent",
     render: ({ state, status, nodeName }) => {
-      console.log(state, status, nodeName, "state");
+      // console.log(state, status, nodeName, "state");
       return (state.items.length > 0 ? <ToolLog state={state.items} /> : status === "inProgress" ? <DotLoader /> : <></>)
     }
   })
@@ -156,26 +257,41 @@ export default function Home() {
         {/* Left Panel */}
         <div className="w-full lg:w-2/3 p-10 overflow-y-auto hide-scrollbar">
           <div className="flex flex-col gap-8 h-full">
-            {(barChartTopic || tableTopic) ||
-              ((barChartData.data.length > 0) && (tableData.rows.length > 0)) ? (
+            {data.length > 0 ? (
               <>
-                {/* {Bar Chart data} */}
-                {barChartTopic && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl font-semibold text-black">{barChartTopic}</span>
-                  </div>
-                  <div className="text-xs text-gray-700 mb-4">Generated {barChartData.date}</div>
-                  {barChartData.data.length > 0 && <CustomBarChart data={barChartData.data} xKey={"x"} barKey={"y"} barLabel={barChartTopic} />}
-                </div>}
+                {data.map((item) => {
+                  return (
+                    <>
+                      {/* {Bar Chart data} */}
+                      {item.type === "barChart" && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xl font-semibold text-black">{item.topic}</span>
+                        </div>
+                        <div className="text-xs text-gray-700 mb-4">Generated {item.date}</div>
+                        {item.data.length > 0 && <CustomBarChart data={item.data} xKey={"x"} barKey={"y"} barLabel={item.topic} />}
+                      </div>}
 
-                {/* {Table data} */}
-                {tableTopic && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl font-semibold text-black">{tableTopic}</span>
-                  </div>
-                  <div className="text-xs text-gray-700 mb-4">Generated {tableData.date}</div>
-                  {tableData.columns.length > 0 && tableData.rows.length > 0 && <Table size="lg" className="bg-white" columns={tableData.columns} rows={tableData.rows} />}
-                </div>}
+                      {/* {Table data} */}
+                      {item.type === "table" && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xl font-semibold text-black">{item.topic}</span>
+                        </div>
+                        <div className="text-xs text-gray-700 mb-4">Generated {item.date}</div>
+                        {item.columns.length > 0 && item.rows.length > 0 && <Table size="lg" className="bg-white" columns={item.columns} rows={item.rows} />}
+
+                      </div>}
+
+                      {/* {Line Chart data} */}
+                      {item.type === "lineChart" && <div className="bg-white rounded-xl shadow p-6 border-t-4 border-indigo-500">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xl font-semibold text-black">{item.topic}</span>
+                        </div>
+                        <div className="text-xs text-gray-700 mb-4">Generated {item.date}</div>
+                        {item.xArr.length > 0 && item.items.length > 0 && <CustomLineChart data={item.items} xarr={item.xArr} />}
+                      </div>}
+                    </>
+                  )
+                })}
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-gray-500">
@@ -183,14 +299,13 @@ export default function Home() {
                 <ul className="space-y-2">
                   <li>
                     <button
-                      disabled={isDisabled}
+                      disabled={data.length > 0}
                       className="px-5 py-2 rounded-full bg-indigo-50 text-gray-500 text-sm font-medium shadow-sm hover:bg-indigo-100 transition border border-indigo-100"
                       onClick={() => {
                         appendMessage(new TextMessage({
                           content: "Get me the revenue data for Amazon Inc for the last 4 years and show it in a bar chart",
                           role: Role.User
                         }))
-                        setIsDisabled(true)
                       }}
                     >
                       Show Amazon Revenue (Last 4 Years)
@@ -198,17 +313,30 @@ export default function Home() {
                   </li>
                   <li>
                     <button
-                      disabled={isDisabled}
+                      disabled={data.length > 0}
                       className="px-5 py-2 rounded-full bg-indigo-50 text-gray-500 text-sm font-medium shadow-sm hover:bg-indigo-100 transition border border-indigo-100"
                       onClick={() => {
                         appendMessage(new TextMessage({
                           content: "Get me the top 10 stock performers and show it in a table",
                           role: Role.User
                         }))
-                        setIsDisabled(true)
                       }}
                     >
                       Show Top 10 Stock Performers
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      disabled={data.length > 0}
+                      className="px-5 py-2 rounded-full bg-indigo-50 text-gray-500 text-sm font-medium shadow-sm hover:bg-indigo-100 transition border border-indigo-100"
+                      onClick={() => {
+                        appendMessage(new TextMessage({
+                          content: "Compare Apple and Tesla Stocks for the last 2 years and show it in a line chart",
+                          role: Role.User
+                        }))
+                      }}
+                    >
+                      Compare Apple and Tesla Stocks
                     </button>
                   </li>
                   {/* Add more suggestions as needed */}
@@ -220,12 +348,12 @@ export default function Home() {
 
         {/* Right Panel */}
         <div className="lg:w-1/3">
-            <CopilotChat
-              labels={{
-                initial: "Hi, I am a stock agent. I can help you analyze and compare different stocks. Please ask me anything about the stock market.",
-              }}
-              className="h-full"
-            />
+          <CopilotChat
+            labels={{
+              initial: initialMessage,
+            }}
+            className="h-full"
+          />
         </div>
       </div>
     </div>
