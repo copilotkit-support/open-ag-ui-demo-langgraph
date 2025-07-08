@@ -43,7 +43,7 @@ def convert_tool_call_for_model(tc):
         "args": json.loads(tc.function.arguments)
     }
     
-async def get_stock_price_tool(tickers: list[str],config: RunnableConfig, period: str = "1d" ) -> str:
+async def get_stock_price_tool(tickers: list[str],config: RunnableConfig, period: str = "1d", interval: str = "1m" ) -> str:
     try:
         config.get("configurable").get("tool_logs")["items"].append({
             "toolName": "GET_STOCK_PRICE",
@@ -71,7 +71,8 @@ async def get_stock_price_tool(tickers: list[str],config: RunnableConfig, period
         tikers = [yf.Ticker(ticker) for ticker in tickers_list]
         results = []
         for ticker_obj, symbol in zip(tikers, tickers_list):
-            hist = ticker_obj.history(period=json.loads(tickers)['period'], interval='1mo')
+            print(json.loads(tickers)['interval'],'intervalintervalinterval')
+            hist = ticker_obj.history(period=json.loads(tickers)['period'], interval=json.loads(tickers)['interval'])
             info = ticker_obj.info
             price = [
                 {"date": str(hist.index[i].date()), "close": hist['Close'].iloc[i]}
@@ -188,9 +189,13 @@ get_stock_price = {
             "period": {
                 "type": "string",
                 "description": "The period of time to get the stock prices for, e.g. '1d', '5d', '1mo', '3mo', '6mo', '1y'1d', '5d', '7d', '1mo', '3mo', '6mo', '1y', '2y', '3y', '4y', '5y'."
+            },
+            "interval": {
+                "type": "string",
+                "description": "The interval of time to get the stock prices for, e.g. '1m', '5m', '15m', '30m', '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo'. You itself choose the interval based on the period of time you want to get the stock prices for. If the period is small like 1d, then choose the interval as '1m' or '5m' or '15m' or '30m' or '60m' or '90m' or '1h'. If the period is large like 1y, then choose the interval as '1mo' or '3mo'. If it like more than 1y, then choose the interval as '6mo'."
             }
         },
-        "required": ["tickers"]
+        "required": ["tickers", "period", "interval"]
     }
 }
 
