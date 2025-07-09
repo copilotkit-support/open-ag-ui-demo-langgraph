@@ -35,3 +35,12 @@ body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;     /* Firefox */
 }
+
+.copilotKitMessagesContainer{
+  padding-top: 2px !important;
+  padding: 0 !important;
+}
+
+.copilotKitMessages{
+  overflow-y: auto !important;
+}

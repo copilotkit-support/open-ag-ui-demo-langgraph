@@ -1,0 +1,77 @@
+"use client"
+
+import { LineChartComponent } from "./chart-components/line-chart"
+import { AllocationTableComponent } from "./chart-components/allocation-table"
+import { InsightCardComponent } from "./chart-components/insight-card"
+import { SectionTitle } from "./chart-components/section-title"
+import { BarChartComponent } from "./chart-components/bar-chart"
+import type { PortfolioState } from "@/lib/mock-data"
+
+interface GenerativeCanvasProps {
+  portfolioState: PortfolioState
+}
+
+export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
+  return (
+    <div className="h-full overflow-auto">
+      <div className="p-4 space-y-4 max-w-none">
+        {/* Performance Section */}
+        <div>
+          <SectionTitle title="Performance" />
+          <div className="mt-3">
+            <LineChartComponent data={portfolioState.performanceData} />
+          </div>
+        </div>
+
+        {/* Allocation and Returns Section */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <SectionTitle title="Allocation" />
+            <div className="mt-3">
+              <AllocationTableComponent allocations={portfolioState.allocations} />
+            </div>
+          </div>
+
+          <div>
+            <SectionTitle title="Returns" />
+            <div className="mt-3">
+              <BarChartComponent data={portfolioState.returnsData} />
+            </div>
+          </div>
+        </div>
+
+        {/* Insights Section */}
+        <div>
+          <SectionTitle title="Market Insights" />
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            {/* Bull Insights */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🐂</span>
+                <h3 className="text-sm font-semibold text-[#1B606F] font-['Roobert']">BULL CASE</h3>
+              </div>
+              <div className="space-y-3">
+                {portfolioState.bullInsights.map((insight, index) => (
+                  <InsightCardComponent key={`bull-${index}`} insight={insight} type="bull" />
+                ))}
+              </div>
+            </div>
+
+            {/* Bear Insights */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🐻</span>
+                <h3 className="text-sm font-semibold text-red-600 font-['Roobert']">BEAR CASE</h3>
+              </div>
+              <div className="space-y-3">
+                {portfolioState.bearInsights.map((insight, index) => (
+                  <InsightCardComponent key={`bear-${index}`} insight={insight} type="bear" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

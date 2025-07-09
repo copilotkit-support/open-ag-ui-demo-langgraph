@@ -17,7 +17,7 @@ const runtime = new CopilotRuntime({
     langgraphAgent : langgraphAgent 
   },
 });
-
+// const runtime = new CopilotRuntime()
 export const POST = async (req: NextRequest) => {
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime,

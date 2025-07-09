@@ -14,6 +14,7 @@
     "@copilotkit/react-ui": "^1.9.1",
     "@copilotkit/runtime": "^1.9.1",
     "@copilotkit/runtime-client-gql": "^1.9.1",
+    "lucide-react": "^0.525.0",
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
