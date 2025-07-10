@@ -382,111 +382,44 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                 case _:
                     raise ValueError(f"Unsupported message role: {message.role}")
 
-        response = await model.bind_tools(
-            [extract_relevant_data_from_user_prompt]
-        ).ainvoke(messages, config=config)
-        if response.tool_calls:
-            tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
-            a_message = AssistantMessage(
-                role="assistant", tool_calls=tool_calls, id=response.id
-            )
-            state["messages"].append(a_message)
-            return
-        else:
-            a_message = AssistantMessage(
-                id=response.id, content=response.content, role="assistant"
-            )
-            state["messages"].append(a_message)
+        retry_counter = 0
+        while True:
+            response = await model.bind_tools(
+                [extract_relevant_data_from_user_prompt]
+            ).ainvoke(messages, config=config)
+            if retry_counter > 3:
+                print("retry_counter", retry_counter)
+                break
+            if response.tool_calls:
+                tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
+                a_message = AssistantMessage(
+                    role="assistant", tool_calls=tool_calls, id=response.id
+                )
+                state["messages"].append(a_message)
+                return
+            elif response.content == '' and response.tool_calls == []:
+                retry_counter += 1
+            else:
+                a_message = AssistantMessage(
+                    id=response.id, content=response.content, role="assistant"
+                )
+                state["messages"].append(a_message)
+                return
         print("hello")
+        a_message = AssistantMessage(
+            id=response.id, content=response.content, role="assistant"
+        )
+        state["messages"].append(a_message)
     except Exception as e:
         print(e)
+        a_message = AssistantMessage(
+            id=response.id, content='', role="assistant"
+        )
+        state["messages"].append(a_message)
         return Command(
             goto="end",
         )
     return
-
-
-async def stock_analysis_node(state: AgentState, config: RunnableConfig):
-
-    print("inside stock analysis node")
-    model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
-    tools = [t.dict() for t in state["tools"]]
-
-    if state["messages"][-1].tool_calls:
-        tool_res = []
-        for i in range(len(state["messages"][-1].tool_calls)):
-
-            if state["messages"][-1].tool_calls[i].function.name == "get_stock_price":
-                tool_res.append(
-                    await get_stock_price_tool(
-                        state["messages"][-1].tool_calls[i].function.arguments, config
-                    )
-                )
-            elif (
-                state["messages"][-1].tool_calls[i].function.name == "get_revenue_data"
-            ):
-                tool_res.append(
-                    await get_revenue_data_tool(
-                        state["messages"][-1].tool_calls[i].function.arguments, config
-                    )
-                )
-
-        messages = []
-        for message in state["messages"]:
-            match message.role:
-                case "user":
-                    messages.append(HumanMessage(content=message.content))
-                case "system":
-                    messages.append(SystemMessage(content=system_prompt))
-                case "assistant" | "ai":
-                    tool_calls_converted = [
-                        convert_tool_call_for_model(tc)
-                        for tc in message.tool_calls or []
-                    ]
-                    messages.append(
-                        AIMessage(
-                            invalid_tool_calls=[],
-                            tool_calls=tool_calls_converted,
-                            type="ai",
-                            content=message.content or "",
-                        )
-                    )
-                case "tool":
-                    # ToolMessage may require additional fields, adjust as needed
-                    messages.append(
-                        ToolMessage(
-                            tool_call_id=message.tool_call_id, content=message.content
-                        )
-                    )
-                case _:
-                    raise ValueError(f"Unsupported message role: {message.role}")
-        for i in range(len(tool_res)):
-            messages.append(
-                ToolMessage(
-                    content=tool_res[i],
-                    tool_call_id=state["messages"][-1].tool_calls[i].id,
-                )
-            )
-
-        response = await model.bind_tools(tools).ainvoke(messages, config=config)
-        if response.tool_calls:
-            tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
-            a_message = AssistantMessage(
-                role="assistant", tool_calls=tool_calls, id=response.id
-            )
-            state["messages"].append(a_message)
-        else:
-            if response.content == "" and response.tool_calls == []:
-                response.content = "Something went wrong! Please try again."
-            a_message = AssistantMessage(
-                id=response.id, content=response.content, role="assistant"
-            )
-            state["messages"].append(a_message)
-
-    return Command(
-        goto="end",
-    )
-
 
 async def end_node(state: AgentState, config: RunnableConfig):
     print("inside end node")
