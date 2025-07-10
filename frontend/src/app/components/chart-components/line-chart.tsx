@@ -9,7 +9,7 @@ interface LineChartData {
 }
 
 interface LineChartComponentProps {
-  data: LineChartData[]
+  data: LineChartData[] | [] | undefined
   size?: "normal" | "small"
 }
 

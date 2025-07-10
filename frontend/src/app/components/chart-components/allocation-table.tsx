@@ -1,4 +1,4 @@
-interface Allocation {
+export interface Allocation {
   ticker: string
   allocation: number
   currentValue: number
@@ -6,7 +6,7 @@ interface Allocation {
 }
 
 interface AllocationTableComponentProps {
-  allocations: Allocation[]
+  allocations: Allocation[] | [] | undefined
   size?: "normal" | "small"
 }
 
@@ -32,7 +32,7 @@ export function AllocationTableComponent({ allocations, size = "normal" }: Alloc
           </tr>
         </thead>
         <tbody>
-          {allocations.map((allocation, index) => (
+          {allocations?.map((allocation, index) => (
             <tr key={allocation.ticker} className={index % 2 === 0 ? "bg-white" : "bg-[#FAFCFA]"}>
               <td className={`font-medium text-[#030507] font-['Plus_Jakarta_Sans'] ${padding} ${fontSize}`}>
                 {allocation.ticker}

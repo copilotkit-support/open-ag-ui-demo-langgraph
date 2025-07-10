@@ -19,10 +19,18 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
         <div>
           <SectionTitle title="Performance" />
           <div className="mt-3">
-            {portfolioState.performanceData.length === 0 ? (
+            {portfolioState?.performanceData?.length === 0 ? (
               <div className="text-center text-sm text-gray-400 py-6">No performance data to show.</div>
             ) : (
-              <LineChartComponent data={portfolioState.performanceData} />
+              <LineChartComponent
+                data={
+                  (portfolioState?.performanceData || []).map(d => ({
+                    ...d,
+                    portfolio: d.portfolio ?? 0,
+                    spy: d.spy ?? 0,
+                  }))
+                }
+              />
             )}
           </div>
         </div>
@@ -35,7 +43,14 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
               {portfolioState.allocations.length === 0 ? (
                 <div className="text-center text-sm text-gray-400 py-6">No allocation data to show.</div>
               ) : (
-                <AllocationTableComponent allocations={portfolioState.allocations} />
+                <AllocationTableComponent
+                  allocations={
+                    (portfolioState?.allocations || []).map(a => ({
+                      ...a,
+                      allocation: Number(a.allocation),
+                    }))
+                  }
+                />
               )}
             </div>
           </div>
@@ -46,7 +61,7 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
               {portfolioState.returnsData.length === 0 ? (
                 <div className="text-center text-sm text-gray-400 py-6">No returns data to show.</div>
               ) : (
-                <BarChartComponent data={portfolioState.returnsData} />
+                <BarChartComponent data={portfolioState?.returnsData || []} />
               )}
             </div>
           </div>

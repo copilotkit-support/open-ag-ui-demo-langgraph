@@ -45,7 +45,11 @@ export function PromptPanel({ availableCash }: PromptPanelProps) {
           <div className="text-sm font-semibold text-[#030507] font-['Roobert']">{formatCurrency(availableCash)}</div>
         </div>
       </div>
-      <CopilotChat className="h-[78vh] p-2" />
+      <CopilotChat className="h-[78vh] p-2" labels={
+        {
+          initial : `I am designed to analyze investment opportunities and track stock performance over time. How can I help you with your investment query? For example, you can ask me to analyze a stock like "Invest in Apple with 10k dollars since Jan 2023"`
+        }
+      } />
 
     </div >
   )

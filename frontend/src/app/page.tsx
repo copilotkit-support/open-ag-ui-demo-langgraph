@@ -10,7 +10,7 @@ import { BarChartComponent } from "@/app/components/chart-components/bar-chart"
 import { LineChartComponent } from "@/app/components/chart-components/line-chart"
 import { AllocationTableComponent } from "@/app/components/chart-components/allocation-table"
 
-interface PortfolioState {
+export interface PortfolioState {
   id: string
   trigger: string
   investmentAmount?: number
@@ -180,7 +180,7 @@ export default function OpenStocksCanvas() {
   return (
     <div className="h-screen bg-[#FAFCFA] flex overflow-hidden">
       {/* Left Panel - Prompt Input */}
-      <div className="w-80 border-r border-[#D8D8E5] bg-white flex-shrink-0">
+      <div className="w-85 border-r border-[#D8D8E5] bg-white flex-shrink-0">
         <PromptPanel availableCash={availableCash} />
       </div>
 
