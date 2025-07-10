@@ -5,7 +5,7 @@ import { AllocationTableComponent } from "./chart-components/allocation-table"
 import { InsightCardComponent } from "./chart-components/insight-card"
 import { SectionTitle } from "./chart-components/section-title"
 import { BarChartComponent } from "./chart-components/bar-chart"
-import type { PortfolioState } from "@/app/lib/mock-data"
+import type { PortfolioState } from "../page"
 
 interface GenerativeCanvasProps {
   portfolioState: PortfolioState
