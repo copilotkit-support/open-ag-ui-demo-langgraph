@@ -5,7 +5,7 @@ import { PromptPanel } from "./components/prompt-panel"
 import { GenerativeCanvas } from "./components/generative-canvas"
 import { ComponentTree } from "./components/component-tree"
 import { CashPanel } from "./components/cash-panel"
-import { mockPortfolioStates, PortfolioState } from "./lib/mock-data"
+import { mockPortfolioStates, PortfolioState } from "@/utils/mock-data"
 import { useCoAgent, useCopilotAction } from "@copilotkit/react-core"
 import { BarChartComponent } from "@/app/components/chart-components/bar-chart"
 import { LineChartComponent } from "@/app/components/chart-components/line-chart"
@@ -49,7 +49,7 @@ export default function OpenStocksCanvas() {
                 }))} size="small" />
                 <AllocationTableComponent allocations={Object.entries(args?.investment_summary?.percent_allocation_per_stock).map(([ticker, allocation]) => ({
                   ticker,
-                  allocation: (allocation as number)?.toFixed(2),
+                  allocation: allocation as number,
                   currentValue: args?.investment_summary.final_prices[ticker] * args?.investment_summary.holdings[ticker],
                   totalReturn: args?.investment_summary.percent_return_per_stock[ticker]
                 }))} size="small" />
@@ -70,7 +70,7 @@ export default function OpenStocksCanvas() {
                       })),
                       allocations: Object.entries(args?.investment_summary?.percent_allocation_per_stock).map(([ticker, allocation]) => ({
                         ticker,
-                        allocation: (allocation as number)?.toFixed(2),
+                        allocation: allocation as number,
                         currentValue: args?.investment_summary?.final_prices[ticker] * args?.investment_summary?.holdings[ticker],
                         totalReturn: args?.investment_summary?.percent_return_per_stock[ticker]
                       })),
@@ -119,15 +119,15 @@ export default function OpenStocksCanvas() {
       id: "aapl-nvda",
       trigger: "apple nvidia",
       performanceData: [
-        { date: "Jan 2023", spy: 10000 },
-        { date: "Mar 2023", spy: 10200 },
-        { date: "Jun 2023", spy: 11000 },
-        { date: "Sep 2023", spy: 10800 },
-        { date: "Dec 2023", spy: 11500 },
-        { date: "Mar 2024", spy: 12200 },
-        { date: "Jun 2024", spy: 12800 },
-        { date: "Sep 2024", spy: 13100 },
-        { date: "Dec 2024", spy: 13600 },
+        { date: "Jan 2023", portfolio: 10000, spy: 10000 },
+        { date: "Mar 2023", portfolio: 10200, spy: 10200 },
+        { date: "Jun 2023", portfolio: 11000, spy: 11000 },
+        { date: "Sep 2023", portfolio: 10800, spy: 10800 },
+        { date: "Dec 2023", portfolio: 11500, spy: 11500 },
+        { date: "Mar 2024", portfolio: 12200, spy: 12200 },
+        { date: "Jun 2024", portfolio: 12800, spy: 12800 },
+        { date: "Sep 2024", portfolio: 13100, spy: 13100 },
+        { date: "Dec 2024", portfolio: 13600, spy: 13600 },
       ],
       allocations: [],
       returnsData: [],

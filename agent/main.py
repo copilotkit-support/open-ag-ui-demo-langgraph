@@ -142,13 +142,16 @@ async def langgraph_agent(input_data: RunAgentInput):
                         )
                     )
 
-                    yield encoder.encode(
-                        TextMessageContentEvent(
-                            type=EventType.TEXT_MESSAGE_CONTENT,
-                            message_id=message_id,
-                            delta=state["messages"][-1].content,
+                    # Only send content event if content is not empty
+                    if state["messages"][-1].content:
+                        yield encoder.encode(
+                            TextMessageContentEvent(
+                                type=EventType.TEXT_MESSAGE_CONTENT,
+                                message_id=message_id,
+                                delta=state["messages"][-1].content,
+                            )
                         )
-                    )
+                    
                     yield encoder.encode(
                         TextMessageEndEvent(
                             type=EventType.TEXT_MESSAGE_END,
