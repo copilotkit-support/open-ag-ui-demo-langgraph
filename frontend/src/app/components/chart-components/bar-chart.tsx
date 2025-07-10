@@ -9,19 +9,24 @@ interface BarChartData {
 
 interface BarChartComponentProps {
   data: BarChartData[]
+  size?: "normal" | "small"
 }
 
-export function BarChartComponent({ data }: BarChartComponentProps) {
+export function BarChartComponent({ data, size = "normal" }: BarChartComponentProps) {
+  const height = size === "small" ? 80 : 160 // h-20 or h-40
+  const padding = size === "small" ? "p-2" : "p-4"
+  const fontSize = size === "small" ? 8 : 10
+  const tooltipFontSize = size === "small" ? "9px" : "11px"
   return (
-    <div className="bg-white border border-[#D8D8E5] rounded-xl p-4">
-      <div className="h-40">
+    <div className={`bg-white border border-[#D8D8E5] rounded-xl ${padding}`}>
+      <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E8E8EF" />
-            <XAxis dataKey="ticker" stroke="#575758" fontSize={10} fontFamily="Plus Jakarta Sans" />
+            <XAxis dataKey="ticker" stroke="#575758" fontSize={fontSize} fontFamily="Plus Jakarta Sans" />
             <YAxis
               stroke="#575758"
-              fontSize={10}
+              fontSize={fontSize}
               fontFamily="Plus Jakarta Sans"
               tickFormatter={(value) => `${value}%`}
             />
@@ -30,7 +35,7 @@ export function BarChartComponent({ data }: BarChartComponentProps) {
                 backgroundColor: "white",
                 border: "1px solid #D8D8E5",
                 borderRadius: "8px",
-                fontSize: "11px",
+                fontSize: tooltipFontSize,
                 fontFamily: "Plus Jakarta Sans",
               }}
               formatter={(value: number) => [`${value.toFixed(1)}%`, "Return"]}

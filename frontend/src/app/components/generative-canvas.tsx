@@ -5,7 +5,7 @@ import { AllocationTableComponent } from "./chart-components/allocation-table"
 import { InsightCardComponent } from "./chart-components/insight-card"
 import { SectionTitle } from "./chart-components/section-title"
 import { BarChartComponent } from "./chart-components/bar-chart"
-import type { PortfolioState } from "@/lib/mock-data"
+import type { PortfolioState } from "@/app/lib/mock-data"
 
 interface GenerativeCanvasProps {
   portfolioState: PortfolioState
@@ -19,7 +19,11 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
         <div>
           <SectionTitle title="Performance" />
           <div className="mt-3">
-            <LineChartComponent data={portfolioState.performanceData} />
+            {portfolioState.performanceData.length === 0 ? (
+              <div className="text-center text-sm text-gray-400 py-6">No performance data to show.</div>
+            ) : (
+              <LineChartComponent data={portfolioState.performanceData} />
+            )}
           </div>
         </div>
 
@@ -28,14 +32,22 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
           <div>
             <SectionTitle title="Allocation" />
             <div className="mt-3">
-              <AllocationTableComponent allocations={portfolioState.allocations} />
+              {portfolioState.allocations.length === 0 ? (
+                <div className="text-center text-sm text-gray-400 py-6">No allocation data to show.</div>
+              ) : (
+                <AllocationTableComponent allocations={portfolioState.allocations} />
+              )}
             </div>
           </div>
 
           <div>
             <SectionTitle title="Returns" />
             <div className="mt-3">
-              <BarChartComponent data={portfolioState.returnsData} />
+              {portfolioState.returnsData.length === 0 ? (
+                <div className="text-center text-sm text-gray-400 py-6">No returns data to show.</div>
+              ) : (
+                <BarChartComponent data={portfolioState.returnsData} />
+              )}
             </div>
           </div>
         </div>
@@ -51,9 +63,13 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
                 <h3 className="text-sm font-semibold text-[#1B606F] font-['Roobert']">BULL CASE</h3>
               </div>
               <div className="space-y-3">
-                {portfolioState.bullInsights.map((insight, index) => (
-                  <InsightCardComponent key={`bull-${index}`} insight={insight} type="bull" />
-                ))}
+                {portfolioState.bullInsights.length === 0 ? (
+                  <div className="text-center text-sm text-gray-400 py-6">No bull case insights.</div>
+                ) : (
+                  portfolioState.bullInsights.map((insight, index) => (
+                    <InsightCardComponent key={`bull-${index}`} insight={insight} type="bull" />
+                  ))
+                )}
               </div>
             </div>
 
@@ -64,9 +80,13 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
                 <h3 className="text-sm font-semibold text-red-600 font-['Roobert']">BEAR CASE</h3>
               </div>
               <div className="space-y-3">
-                {portfolioState.bearInsights.map((insight, index) => (
-                  <InsightCardComponent key={`bear-${index}`} insight={insight} type="bear" />
-                ))}
+                {portfolioState.bearInsights.length === 0 ? (
+                  <div className="text-center text-sm text-gray-400 py-6">No bear case insights.</div>
+                ) : (
+                  portfolioState.bearInsights.map((insight, index) => (
+                    <InsightCardComponent key={`bear-${index}`} insight={insight} type="bear" />
+                  ))
+                )}
               </div>
             </div>
           </div>

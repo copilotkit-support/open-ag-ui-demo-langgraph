@@ -5,7 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { Send, User, Bot, AlertCircle } from "lucide-react"
 import { CopilotChat } from "@copilotkit/react-ui"
-
+import { Markdown } from "@copilotkit/react-ui"
 interface Message {
   id: string
   type: "user" | "assistant"
@@ -14,7 +14,6 @@ interface Message {
 }
 
 interface PromptPanelProps {
-  onSubmit: (prompt: string) => void
   availableCash: number
 }
 
@@ -25,7 +24,7 @@ const samplePrompts = [
   "Invest $75,000 in Meta and Netflix",
 ]
 
-export function PromptPanel({ onSubmit, availableCash }: PromptPanelProps) {
+export function PromptPanel({ availableCash }: PromptPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -245,7 +244,7 @@ export function PromptPanel({ onSubmit, availableCash }: PromptPanelProps) {
           }, [message])
           return (
             <div className={`flex gap-3`}>
-              {subComponent ? <div className="mt-2">{subComponent}</div> :
+              {subComponent ? <div className="mt-2 mb-4">{subComponent}</div> :
                 <>
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-[#86ECE4] text-[#030507]`}
@@ -256,7 +255,7 @@ export function PromptPanel({ onSubmit, availableCash }: PromptPanelProps) {
                     <div
                       className={`inline-block p-3 rounded-lg text-xs leading-relaxed bg-[#F0F0F4] text-[#030507] rounded-bl-sm`}
                     >
-                      {message}
+                      <Markdown content={message || ""} />
                     </div>
                     <div className="text-xs text-[#858589] mt-1">
                       {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}

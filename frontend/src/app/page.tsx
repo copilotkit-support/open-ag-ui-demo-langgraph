@@ -1,12 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { PromptPanel } from "./components/prompt-panel"
 import { GenerativeCanvas } from "./components/generative-canvas"
 import { ComponentTree } from "./components/component-tree"
 import { CashPanel } from "./components/cash-panel"
-import { mockPortfolioStates } from "./lib/mock-data"
-import { useCopilotAction } from "@copilotkit/react-core"
+import { mockPortfolioStates, PortfolioState } from "./lib/mock-data"
+import { useCoAgent, useCopilotAction } from "@copilotkit/react-core"
+import { BarChartComponent } from "@/app/components/chart-components/bar-chart"
+import { LineChartComponent } from "@/app/components/chart-components/line-chart"
+import { AllocationTableComponent } from "@/app/components/chart-components/allocation-table"
 
 export default function OpenStocksCanvas() {
   const [currentPrompt, setCurrentPrompt] = useState("")
@@ -15,45 +18,89 @@ export default function OpenStocksCanvas() {
   const [totalCash, setTotalCash] = useState(1000000)
   const [investedAmount, setInvestedAmount] = useState(0)
 
-  const handlePromptSubmit = (prompt: string) => {
-    setCurrentPrompt(prompt)
-
-    // Extract investment amount from prompt
-    const amountMatch = prompt.match(/\$?([\d,]+)k?/i)
-    let amount = 0
-    if (amountMatch) {
-      const numStr = amountMatch[1].replace(/,/g, "")
-      amount = Number.parseInt(numStr)
-      if (prompt.toLowerCase().includes("k")) {
-        amount *= 1000
-      }
+  const { state, setState } = useCoAgent({
+    name: "langgraphAgent",
+    initialState: {
+      available_cash: totalCash,
+      investment_summary: {} as any
     }
+  })
 
-    // Simulate AI response by matching prompt to mock states
-    const matchedState =
-      mockPortfolioStates.find((state) => prompt.toLowerCase().includes(state.trigger.toLowerCase())) ||
-      mockPortfolioStates[0]
+  useEffect(() => {
+    console.log(state, "statestatestatestatestatestate")
+  }, [state])
 
-    // Calculate current portfolio value based on performance
-    const latestPerformance = matchedState.performanceData[matchedState.performanceData.length - 1]
-    const initialInvestment = matchedState.performanceData[0].portfolio
-    const performanceMultiplier = latestPerformance.portfolio / initialInvestment
-    const currentPortfolioValue = amount * performanceMultiplier
+  useCopilotAction({
+    name: "render_standard_charts_and_table",
+    description: "This is an action to render a standard chart and table. The chart can be a bar chart or a line chart. The table can be a table of data.",
+    renderAndWaitForResponse: ({ args, respond, status }) => {
+      useEffect(() => {
+        console.log(args, "args")
+      }, [args])
+      return (
+        <>
+          {(args?.investment_summary?.percent_allocation_per_stock && args?.investment_summary?.percent_return_per_stock && args?.investment_summary?.performanceData) &&
+            <>
+              <div className="flex flex-col gap-4">
+                <LineChartComponent data={args?.investment_summary?.performanceData} size="small" />
+                <BarChartComponent data={Object.entries(args?.investment_summary?.percent_return_per_stock).map(([ticker, return1]) => ({
+                  ticker,
+                  return: return1 as number
+                }))} size="small" />
+                <AllocationTableComponent allocations={Object.entries(args?.investment_summary?.percent_allocation_per_stock).map(([ticker, allocation]) => ({
+                  ticker,
+                  allocation: (allocation as number)?.toFixed(2),
+                  currentValue: args?.investment_summary.final_prices[ticker] * args?.investment_summary.holdings[ticker],
+                  totalReturn: args?.investment_summary.percent_return_per_stock[ticker]
+                }))} size="small" />
 
-    // Update the matched state with the extracted amount
-    const updatedState = {
-      ...matchedState,
-      investmentAmount: amount,
-      currentPortfolioValue: currentPortfolioValue,
-      allocations: matchedState.allocations.map((allocation) => ({
-        ...allocation,
-        currentValue: (currentPortfolioValue * allocation.allocation) / 100,
-      })),
+              </div>
+
+              <button hidden={status == "complete"}
+                className="mt-4 rounded-full px-6 py-2 bg-green-50 text-green-700 border border-green-200 shadow-sm hover:bg-green-100 transition-colors font-semibold text-sm"
+                onClick={() => {
+                  debugger
+                  if (respond) {
+                    setTotalCash(args?.investment_summary?.cash)
+                    setCurrentState({
+                      ...currentState,
+                      returnsData: Object.entries(args?.investment_summary?.percent_return_per_stock).map(([ticker, return1]) => ({
+                        ticker,
+                        return: return1 as number
+                      })),
+                      allocations: Object.entries(args?.investment_summary?.percent_allocation_per_stock).map(([ticker, allocation]) => ({
+                        ticker,
+                        allocation: (allocation as number)?.toFixed(2),
+                        currentValue: args?.investment_summary?.final_prices[ticker] * args?.investment_summary?.holdings[ticker],
+                        totalReturn: args?.investment_summary?.percent_return_per_stock[ticker]
+                      })),
+                      performanceData: args?.investment_summary?.performanceData
+                    })
+                    respond("Data rendered successfully")
+                  }
+                }}
+              >
+                Accept
+              </button>
+              <button hidden={status == "complete"}
+                className="rounded-full px-6 py-2 bg-red-50 text-red-700 border border-red-200 shadow-sm hover:bg-red-100 transition-colors font-semibold text-sm ml-2"
+                onClick={() => {
+                  debugger
+                  if (respond) {
+                    respond("Data rendering rejected")
+                  }
+                }}
+              >
+                Reject
+              </button>
+            </>
+          }
+
+        </>
+
+      )
     }
-
-    setCurrentState(updatedState)
-    setInvestedAmount(amount)
-  }
+  })
 
   const toggleComponentTree = () => {
     setShowComponentTree(!showComponentTree)
@@ -63,35 +110,40 @@ export default function OpenStocksCanvas() {
   const currentPortfolioValue = currentState.currentPortfolioValue || investedAmount
 
 
-  useCopilotAction({
-    name : "changeBackgroundColor",
-    parameters : [
-      {
-        name : "color",
-        type : "string",
-        description : "The color to change the background to",
-        required : true
-      }
-    ],
-    description : "This is an action to change the background color of the canvas",
-    render : ({args})=>{
-      console.log(args.color, "args")
-      return (
-        <div>
-          <h1>{args.color}</h1>
-        </div>
-      )
-    }
-  })
+  useEffect(() => {
+    getBenchmarkData()
+  }, [])
 
-  
+  function getBenchmarkData() {
+    let a: PortfolioState = {
+      id: "aapl-nvda",
+      trigger: "apple nvidia",
+      performanceData: [
+        { date: "Jan 2023", spy: 10000 },
+        { date: "Mar 2023", spy: 10200 },
+        { date: "Jun 2023", spy: 11000 },
+        { date: "Sep 2023", spy: 10800 },
+        { date: "Dec 2023", spy: 11500 },
+        { date: "Mar 2024", spy: 12200 },
+        { date: "Jun 2024", spy: 12800 },
+        { date: "Sep 2024", spy: 13100 },
+        { date: "Dec 2024", spy: 13600 },
+      ],
+      allocations: [],
+      returnsData: [],
+      bullInsights: [],
+      bearInsights: [],
+    }
+    setCurrentState(a)
+  }
+
 
 
   return (
     <div className="h-screen bg-[#FAFCFA] flex overflow-hidden">
       {/* Left Panel - Prompt Input */}
       <div className="w-72 border-r border-[#D8D8E5] bg-white flex-shrink-0">
-        <PromptPanel onSubmit={handlePromptSubmit} availableCash={availableCash} />
+        <PromptPanel availableCash={availableCash} />
       </div>
 
       {/* Center Panel - Generative Canvas */}
