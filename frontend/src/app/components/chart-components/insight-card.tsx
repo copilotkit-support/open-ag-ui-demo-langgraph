@@ -13,7 +13,7 @@ export function InsightCardComponent({ insight, type }: InsightCardComponentProp
   const getTypeStyles = () => {
     switch (type) {
       case "bull":
-        return "border-l-4 border-l-[#1B606F] bg-[#86ECE4]/10"
+        return "border-l-4 border-l-[#00d237] bg-[#86ECE4]/10"
       case "bear":
         return "border-l-4 border-l-red-500 bg-red-50"
       default:

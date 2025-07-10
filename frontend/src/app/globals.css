@@ -36,11 +36,11 @@ body {
   scrollbar-width: none;     /* Firefox */
 }
 
-.copilotKitMessagesContainer{
+/* .copilotKitMessagesContainer{
   padding-top: 2px !important;
   padding: 0 !important;
 }
 
 .copilotKitMessages{
   overflow-y: auto !important;
-}
+} */

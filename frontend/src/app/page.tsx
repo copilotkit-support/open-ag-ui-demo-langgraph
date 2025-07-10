@@ -5,15 +5,55 @@ import { PromptPanel } from "./components/prompt-panel"
 import { GenerativeCanvas } from "./components/generative-canvas"
 import { ComponentTree } from "./components/component-tree"
 import { CashPanel } from "./components/cash-panel"
-import { mockPortfolioStates, PortfolioState } from "@/utils/mock-data"
 import { useCoAgent, useCopilotAction } from "@copilotkit/react-core"
 import { BarChartComponent } from "@/app/components/chart-components/bar-chart"
 import { LineChartComponent } from "@/app/components/chart-components/line-chart"
 import { AllocationTableComponent } from "@/app/components/chart-components/allocation-table"
 
+interface PortfolioState {
+  id: string
+  trigger: string
+  investmentAmount?: number
+  currentPortfolioValue?: number
+  performanceData: Array<{
+    date: string
+    portfolio: number
+    spy: number
+  }>
+  allocations: Array<{
+    ticker: string
+    allocation: number
+    currentValue: number
+    totalReturn: number
+  }>
+  returnsData: Array<{
+    ticker: string
+    return: number
+  }>
+  bullInsights: Array<{
+    title: string
+    description: string
+    emoji: string
+  }>
+  bearInsights: Array<{
+    title: string
+    description: string
+    emoji: string
+  }>
+}
+
+
 export default function OpenStocksCanvas() {
-  const [currentPrompt, setCurrentPrompt] = useState("")
-  const [currentState, setCurrentState] = useState(mockPortfolioStates[0])
+  const [currentState, setCurrentState] = useState<PortfolioState>({
+    id: "",
+    trigger: "",
+    performanceData: [],
+    allocations: [],
+    returnsData: [],
+    bullInsights: [],
+    bearInsights: [],
+  })
+
   const [showComponentTree, setShowComponentTree] = useState(false)
   const [totalCash, setTotalCash] = useState(1000000)
   const [investedAmount, setInvestedAmount] = useState(0)
@@ -22,20 +62,16 @@ export default function OpenStocksCanvas() {
     name: "langgraphAgent",
     initialState: {
       available_cash: totalCash,
-      investment_summary: {} as any
+      investment_summary: {} as any,
     }
   })
-
-  useEffect(() => {
-    console.log(state, "statestatestatestatestatestate")
-  }, [state])
 
   useCopilotAction({
     name: "render_standard_charts_and_table",
     description: "This is an action to render a standard chart and table. The chart can be a bar chart or a line chart. The table can be a table of data.",
     renderAndWaitForResponse: ({ args, respond, status }) => {
       useEffect(() => {
-        console.log(args, "args")
+        console.log(args, "argsargsargsargsargsaaa")
       }, [args])
       return (
         <>
@@ -74,7 +110,9 @@ export default function OpenStocksCanvas() {
                         currentValue: args?.investment_summary?.final_prices[ticker] * args?.investment_summary?.holdings[ticker],
                         totalReturn: args?.investment_summary?.percent_return_per_stock[ticker]
                       })),
-                      performanceData: args?.investment_summary?.performanceData
+                      performanceData: args?.investment_summary?.performanceData,
+                      bullInsights: args?.insights?.bullInsights || [],
+                      bearInsights: args?.insights?.bearInsights || []
                     })
                     respond("Data rendered successfully")
                   }
@@ -142,7 +180,7 @@ export default function OpenStocksCanvas() {
   return (
     <div className="h-screen bg-[#FAFCFA] flex overflow-hidden">
       {/* Left Panel - Prompt Input */}
-      <div className="w-72 border-r border-[#D8D8E5] bg-white flex-shrink-0">
+      <div className="w-80 border-r border-[#D8D8E5] bg-white flex-shrink-0">
         <PromptPanel availableCash={availableCash} />
       </div>
 

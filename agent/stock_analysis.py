@@ -16,10 +16,12 @@ import json
 import pandas as pd
 import requests
 import asyncio
-from prompts import system_prompt, mod_prompt
+from prompts import system_prompt, insights_prompt
 from datetime import datetime
 from typing import Any
 import uuid
+from tavily import TavilyClient
+import os
 
 load_dotenv()
 
@@ -35,7 +37,8 @@ class AgentState(CopilotKitState):
     be_stock_data: Any
     be_arguments: dict
     available_cash: int
-    investment_summary : dict
+    investment_summary: dict
+
 
 def convert_tool_call(tc):
     return {
@@ -286,6 +289,62 @@ extract_relevant_data_from_user_prompt = {
 }
 
 
+generate_insights = {
+    "name": "generate_insights",
+    "description": "Generate positive (bull) and negative (bear) insights for a stock or portfolio.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "bullInsights": {
+                "type": "array",
+                "description": "A list of positive insights (bull case) for the stock or portfolio.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Short title for the positive insight.",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Detailed description of the positive insight.",
+                        },
+                        "emoji": {
+                            "type": "string",
+                            "description": "Emoji representing the positive insight.",
+                        },
+                    },
+                    "required": ["title", "description", "emoji"],
+                },
+            },
+            "bearInsights": {
+                "type": "array",
+                "description": "A list of negative insights (bear case) for the stock or portfolio.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Short title for the negative insight.",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Detailed description of the negative insight.",
+                        },
+                        "emoji": {
+                            "type": "string",
+                            "description": "Emoji representing the negative insight.",
+                        },
+                    },
+                    "required": ["title", "description", "emoji"],
+                },
+            },
+        },
+        "required": ["bullInsights", "bearInsights"],
+    },
+}
+
+
 async def chat_node(state: AgentState, config: RunnableConfig):
     try:
 
@@ -295,7 +354,9 @@ async def chat_node(state: AgentState, config: RunnableConfig):
         for message in state["messages"]:
             match message.role:
                 case "user":
-                    messages.append(HumanMessage(content="New request: " + message.content))
+                    messages.append(
+                        HumanMessage(content="New request: " + message.content)
+                    )
                 case "system":
                     messages.append(SystemMessage(content=system_prompt))
                 case "assistant" | "ai":
@@ -330,7 +391,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                 role="assistant", tool_calls=tool_calls, id=response.id
             )
             state["messages"].append(a_message)
-            return 
+            return
         else:
             a_message = AssistantMessage(
                 id=response.id, content=response.content, role="assistant"
@@ -342,7 +403,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
         return Command(
             goto="end",
         )
-    return 
+    return
 
 
 async def stock_analysis_node(state: AgentState, config: RunnableConfig):
@@ -625,7 +686,7 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
         spy_prices = spy_prices.reindex(stock_data.index, method="ffill")
     except Exception as e:
         print("Error fetching SPY data:", e)
-        spy_prices = pd.Series([None]*len(stock_data), index=stock_data.index)
+        spy_prices = pd.Series([None] * len(stock_data), index=stock_data.index)
 
     # Simulate investing the same total_invested in SPY
     spy_shares = 0.0
@@ -641,7 +702,9 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
             spy_shares = spy_cash // spy_price
             spy_invested = spy_shares * spy_price
             spy_cash -= spy_invested
-            spy_investment_log.append(f"{first_date.date()}: Bought {spy_shares:.2f} shares of SPY at ${spy_price:.2f} (cost: ${spy_invested:.2f})")
+            spy_investment_log.append(
+                f"{first_date.date()}: Bought {spy_shares:.2f} shares of SPY at ${spy_price:.2f} (cost: ${spy_invested:.2f})"
+            )
     else:
         # DCA: invest equal portions at each date
         dca_amount = total_invested / len(stock_data)
@@ -655,7 +718,9 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
                 spy_shares += shares
                 spy_cash -= cost
                 spy_invested += cost
-                spy_investment_log.append(f"{date.date()}: Bought {shares:.2f} shares of SPY at ${spy_price:.2f} (cost: ${cost:.2f})")
+                spy_investment_log.append(
+                    f"{date.date()}: Bought {shares:.2f} shares of SPY at ${spy_price:.2f} (cost: ${cost:.2f})"
+                )
 
     # Build performanceData array
     performanceData = []
@@ -663,22 +728,30 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
     running_cash = total_cash
     for date in stock_data.index:
         # Portfolio value: sum of shares * price at this date + cash
-        port_value = sum(running_holdings[t] * stock_data.loc[date][t] for t in tickers if not pd.isna(stock_data.loc[date][t])) + running_cash
+        port_value = (
+            sum(
+                running_holdings[t] * stock_data.loc[date][t]
+                for t in tickers
+                if not pd.isna(stock_data.loc[date][t])
+            )
+            + running_cash
+        )
         # SPY value: shares * price + cash
         spy_price = spy_prices.loc[date]
         if isinstance(spy_price, pd.Series):
             spy_price = spy_price.iloc[0]
         spy_val = spy_shares * spy_price + spy_cash if not pd.isna(spy_price) else None
-        performanceData.append({
-            "date": str(date.date()),
-            "portfolio": float(port_value) if port_value is not None else None,
-            "spy": float(spy_val) if spy_val is not None else None
-        })
+        performanceData.append(
+            {
+                "date": str(date.date()),
+                "portfolio": float(port_value) if port_value is not None else None,
+                "spy": float(spy_val) if spy_val is not None else None,
+            }
+        )
 
     state["investment_summary"]["performanceData"] = performanceData
     # --- End performanceData logic ---
 
-    
     # Compose summary message
     if add_funds_needed:
         msg = "Some investments could not be made due to insufficient funds. Please add more funds to your wallet.\n"
@@ -704,27 +777,40 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
         )
     )
     model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
-    response = await model.ainvoke(
-        [
-            {
-                "role": "developer",
-                "content": mod_prompt,
-            },
-            {
-                "role": "user",
-                "content": msg,
-            },
-        ],
-        config=config,
-    )
+    # response = await model.ainvoke(
+    #     [
+    #         {
+    #             "role": "developer",
+    #             "content": mod_prompt,
+    #         },
+    #         {
+    #             "role": "user",
+    #             "content": msg,
+    #         },
+    #     ],
+    #     config=config,
+    # )
     # state["messages"].append(
     #     AssistantMessage(role="assistant", content=response.content, id=str(uuid.uuid4()))
     # )
-    
+
     state["messages"].append(
-        AssistantMessage(role="assistant", tool_calls=[
-            {"id": str(uuid.uuid4()), "type": "function", "function": {"name": "render_standard_charts_and_table", "arguments": json.dumps({"investment_summary": state["investment_summary"]})}}
-            ], id=str(uuid.uuid4()))
+        AssistantMessage(
+            role="assistant",
+            tool_calls=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": "function",
+                    "function": {
+                        "name": "render_standard_charts_and_table",
+                        "arguments": json.dumps(
+                            {"investment_summary": state["investment_summary"]}
+                        ),
+                    },
+                }
+            ],
+            id=str(uuid.uuid4()),
+        )
     )
     # config.get("configurable").get("emit_event")(
     #     StateDeltaEvent(
@@ -755,13 +841,85 @@ async def ui_decision_node(state: AgentState, config: RunnableConfig):
 
 async def insights_node(state: AgentState, config: RunnableConfig):
     print("inside insights node")
+    tavily_api_key = os.getenv("TAVILY_API_KEY")
+    if not tavily_api_key:
+        print("TAVILY_API_KEY not set in environment.")
+        return Command(goto="end", update=state)
+    tavily_client = TavilyClient(api_key=tavily_api_key)
+    args = state.get("be_arguments") or state.get("arguments")
+    tickers = args.get("ticker_symbols", [])
+    news_summary = {}
+    for ticker in tickers:
+        try:
+            pos_results = tavily_client.search(
+                f"good news about {ticker} stock", topic="news", max_results=2
+            )
+            neg_results = tavily_client.search(
+                f"bad news about {ticker} stock", topic="news", max_results=2
+            )
+            news_summary[ticker] = {
+                "positive": [
+                    {
+                        "title": item["title"],
+                        "url": item["url"],
+                        "content": item.get("content", ""),
+                    }
+                    for item in pos_results.get("results", [])
+                ],
+                "negative": [
+                    {
+                        "title": item["title"],
+                        "url": item["url"],
+                        "content": item.get("content", ""),
+                    }
+                    for item in neg_results.get("results", [])
+                ],
+            }
+        except Exception as e:
+            print(f"Error fetching news for {ticker}: {e}")
+            news_summary[ticker] = {"positive": [], "negative": []}
+    # Compose a summary string for the AI model
+    summary_str = "Stock News Insights:\n"
+    for ticker, news in news_summary.items():
+        summary_str += f"\nTicker: {ticker}\n"
+        summary_str += "  Positive News:\n"
+        for n in news["positive"]:
+            summary_str += f"    - {n['title']} ({n['url']})\n"
+        summary_str += "  Negative News:\n"
+        for n in news["negative"]:
+            summary_str += f"    - {n['title']} ({n['url']})\n"
+    # Present to AI model
+    model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
+    response = await model.bind_tools(generate_insights).ainvoke(
+        [
+            {"role": "system", "content": insights_prompt},
+            {"role": "user", "content": summary_str},
+        ],
+        config=config,
+    )
+    if response.tool_calls:
+        args_dict = json.loads(state['messages'][-1].tool_calls[0].function.arguments)
+
+# Step 2: Add the insights key
+        args_dict['insights'] = response.tool_calls[0]['args']
+
+        # Step 3: Convert back to string
+        state['messages'][-1].tool_calls[0].function.arguments = json.dumps(args_dict)
+    else:
+        state["insights"] = {}
+
     return Command(goto="end", update=state)
 
+
 def your_router_function(state: AgentState, config: RunnableConfig):
-    if state["messages"][-1].tool_calls == [] or state["messages"][-1].tool_calls is None:
+    if (
+        state["messages"][-1].tool_calls == []
+        or state["messages"][-1].tool_calls is None
+    ):
         return "end"
     else:
         return "simulation"
+
 
 async def agent_graph():
     workflow = StateGraph(AgentState)

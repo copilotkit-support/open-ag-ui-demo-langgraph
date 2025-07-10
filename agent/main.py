@@ -41,7 +41,6 @@ class AgentState(CopilotKitState):
     available_cash: int
     investment_summary : dict
 
-
 @app.post("/langgraph-agent")
 async def langgraph_agent(input_data: RunAgentInput):
     try:
@@ -149,6 +148,14 @@ async def langgraph_agent(input_data: RunAgentInput):
                                 type=EventType.TEXT_MESSAGE_CONTENT,
                                 message_id=message_id,
                                 delta=state["messages"][-1].content,
+                            )
+                        )
+                    else:
+                        yield encoder.encode(
+                            TextMessageContentEvent(
+                                type=EventType.TEXT_MESSAGE_CONTENT,
+                                message_id=message_id,
+                                delta="Something went wrong! Please try again.",
                             )
                         )
                     

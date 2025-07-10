@@ -1,6 +1,6 @@
 interface Allocation {
   ticker: string
-  allocation: number|string
+  allocation: number
   currentValue: number
   totalReturn: number
 }
@@ -37,7 +37,7 @@ export function AllocationTableComponent({ allocations, size = "normal" }: Alloc
               <td className={`font-medium text-[#030507] font-['Plus_Jakarta_Sans'] ${padding} ${fontSize}`}>
                 {allocation.ticker}
               </td>
-              <td className={`text-[#575758] font-['Plus_Jakarta_Sans'] ${padding} ${fontSize}`}>{allocation.allocation}%</td>
+              <td className={`text-[#575758] font-['Plus_Jakarta_Sans'] ${padding} ${fontSize}`}>{allocation.allocation.toFixed(2)}%</td>
               <td className={`text-[#575758] font-['Plus_Jakarta_Sans'] ${padding} ${fontSize}`}>
                 ${(allocation.currentValue / 1000).toFixed(1)}K
               </td>
