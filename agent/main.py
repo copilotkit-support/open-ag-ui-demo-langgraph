@@ -68,6 +68,7 @@ async def langgraph_agent(input_data: RunAgentInput):
                     snapshot={
                         "available_cash": input_data.state["available_cash"],
                         "investment_summary" : input_data.state["investment_summary"],
+                        "investment_portfolio" : input_data.state["investment_portfolio"]
                     }
                 )
             )
@@ -77,6 +78,7 @@ async def langgraph_agent(input_data: RunAgentInput):
                 be_stock_data=None,
                 be_arguments=None,
                 available_cash=input_data.state["available_cash"],
+                investment_portfolio=input_data.state["investment_portfolio"]
             )
             agent = await agent_graph()
 

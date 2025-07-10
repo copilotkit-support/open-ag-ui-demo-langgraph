@@ -42,6 +42,11 @@ export interface PortfolioState {
   }>
 }
 
+export interface InvestmentPortfolio {
+  ticker: string
+  amount: number
+}
+
 
 export default function OpenStocksCanvas() {
   const [currentState, setCurrentState] = useState<PortfolioState>({
@@ -63,8 +68,13 @@ export default function OpenStocksCanvas() {
     initialState: {
       available_cash: totalCash,
       investment_summary: {} as any,
+      investment_portfolio: [] as InvestmentPortfolio[]
     }
   })
+
+  useEffect(() => {
+    console.log(state, "statechanges")
+  }, [state])
 
   useCopilotAction({
     name: "render_standard_charts_and_table",

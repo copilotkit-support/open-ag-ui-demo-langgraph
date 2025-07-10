@@ -38,6 +38,7 @@ class AgentState(CopilotKitState):
     be_arguments: dict
     available_cash: int
     investment_summary: dict
+    investment_portfolio: list
 
 
 def convert_tool_call(tc):
@@ -251,7 +252,7 @@ get_revenue_data = {
 
 extract_relevant_data_from_user_prompt = {
     "name": "extract_relevant_data_from_user_prompt",
-    "description": "Gets the data like ticker symbols, amount of dollars to be invested, interval of investment",
+    "description": "Gets the data like ticker symbols, amount of dollars to be invested, interval of investment.",
     "parameters": {
         "type": "object",
         "properties": {
@@ -354,11 +355,9 @@ async def chat_node(state: AgentState, config: RunnableConfig):
         for message in state["messages"]:
             match message.role:
                 case "user":
-                    messages.append(
-                        HumanMessage(content="New request: " + message.content)
-                    )
+                    messages.append(HumanMessage(content=message.content))
                 case "system":
-                    messages.append(SystemMessage(content=system_prompt))
+                    messages.append(SystemMessage(content=system_prompt.replace("{PORTFOLIO_DATA_PLACEHOLDER}", json.dumps(state["investment_portfolio"]))))
                 case "assistant" | "ai":
                     tool_calls_converted = [
                         convert_tool_call_for_model(tc)
@@ -384,12 +383,12 @@ async def chat_node(state: AgentState, config: RunnableConfig):
 
         retry_counter = 0
         while True:
-            response = await model.bind_tools(
-                [extract_relevant_data_from_user_prompt]
-            ).ainvoke(messages, config=config)
             if retry_counter > 3:
                 print("retry_counter", retry_counter)
                 break
+            response = await model.bind_tools(
+                [extract_relevant_data_from_user_prompt]
+            ).ainvoke(messages, config=config)
             if response.tool_calls:
                 tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
                 a_message = AssistantMessage(
@@ -397,7 +396,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                 )
                 state["messages"].append(a_message)
                 return
-            elif response.content == '' and response.tool_calls == []:
+            elif response.content == "" and response.tool_calls == []:
                 retry_counter += 1
             else:
                 a_message = AssistantMessage(
@@ -412,14 +411,13 @@ async def chat_node(state: AgentState, config: RunnableConfig):
         state["messages"].append(a_message)
     except Exception as e:
         print(e)
-        a_message = AssistantMessage(
-            id=response.id, content='', role="assistant"
-        )
+        a_message = AssistantMessage(id=response.id, content="", role="assistant")
         state["messages"].append(a_message)
         return Command(
             goto="end",
         )
     return
+
 
 async def end_node(state: AgentState, config: RunnableConfig):
     print("inside end node")
@@ -428,6 +426,20 @@ async def end_node(state: AgentState, config: RunnableConfig):
 async def simulation_node(state: AgentState, config: RunnableConfig):
     print("inside simulation node")
     arguments = json.loads(state["messages"][-1].tool_calls[0].function.arguments)
+    state["investment_portfolio"] = json.dumps([{"ticker": ticker, "amount" : arguments['amount_of_dollars_to_be_invested'][index]} for index,ticker in enumerate(arguments['ticker_symbols'])])
+    config.get("configurable").get("emit_event")(
+            StateDeltaEvent(
+                type=EventType.STATE_DELTA,
+                delta=[
+                    {
+                        "op": "replace",
+                        "path": f"/investment_portfolio",
+                        "value": state["investment_portfolio"],
+                    }
+                ],
+            )
+        )
+    await asyncio.sleep(0)
     tickers = arguments["ticker_symbols"]
     investment_date = arguments["investment_date"]
     current_year = datetime.now().year
@@ -831,13 +843,13 @@ async def insights_node(state: AgentState, config: RunnableConfig):
         config=config,
     )
     if response.tool_calls:
-        args_dict = json.loads(state['messages'][-1].tool_calls[0].function.arguments)
+        args_dict = json.loads(state["messages"][-1].tool_calls[0].function.arguments)
 
-# Step 2: Add the insights key
-        args_dict['insights'] = response.tool_calls[0]['args']
+        # Step 2: Add the insights key
+        args_dict["insights"] = response.tool_calls[0]["args"]
 
         # Step 3: Convert back to string
-        state['messages'][-1].tool_calls[0].function.arguments = json.dumps(args_dict)
+        state["messages"][-1].tool_calls[0].function.arguments = json.dumps(args_dict)
     else:
         state["insights"] = {}
 

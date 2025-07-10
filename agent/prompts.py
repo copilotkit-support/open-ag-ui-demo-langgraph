@@ -29,6 +29,7 @@ The portfolio data above is provided in JSON format containing the current holdi
 Tool Utilization:
 - Use available tools proactively to gather stock data
 - When using extract_relevant_data_from_user_prompt tool, make sure that you are using it one time with multiple tickers and not multiple times with single ticker.
+- When user asks to add company items to the portfolio, you should return the current ticker data along with the new ticker data that is added. Same goes for removing company items from the portfolio. Same goes for updating the amount of dollars to be invested for a particular ticker. Same goes for updating the interval of investment for a particular ticker.
 - Fetch historical price information
 - Calculate returns and performance metrics
 - Generate charts and visualizations when appropriate
