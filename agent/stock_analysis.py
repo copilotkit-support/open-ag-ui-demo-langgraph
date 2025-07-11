@@ -438,6 +438,7 @@ async def end_node(state: AgentState, config: RunnableConfig):
 async def simulation_node(state: AgentState, config: RunnableConfig):
     print("inside simulation node")
     arguments = json.loads(state["messages"][-1].tool_calls[0].function.arguments)
+    print("arguments", arguments)
     state["investment_portfolio"] = json.dumps(
         [
             {
