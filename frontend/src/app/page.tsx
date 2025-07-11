@@ -40,6 +40,7 @@ export interface PortfolioState {
     description: string
     emoji: string
   }>
+  totalReturns : number
 }
 
 export interface InvestmentPortfolio {
@@ -57,6 +58,8 @@ export default function OpenStocksCanvas() {
     returnsData: [],
     bullInsights: [],
     bearInsights: [],
+    currentPortfolioValue : 0,
+    totalReturns : 0
   })
 
   const [showComponentTree, setShowComponentTree] = useState(false)
@@ -71,10 +74,6 @@ export default function OpenStocksCanvas() {
       investment_portfolio: [] as InvestmentPortfolio[]
     }
   })
-
-  useEffect(() => {
-    console.log(state, "statechanges")
-  }, [state])
 
   useCopilotAction({
     name: "render_standard_charts_and_table",
@@ -122,7 +121,18 @@ export default function OpenStocksCanvas() {
                       })),
                       performanceData: args?.investment_summary?.performanceData,
                       bullInsights: args?.insights?.bullInsights || [],
-                      bearInsights: args?.insights?.bearInsights || []
+                      bearInsights: args?.insights?.bearInsights || [],
+                      currentPortfolioValue: args?.investment_summary?.total_value,
+                      totalReturns: (Object.values(args?.investment_summary?.returns) as number[])
+                      .reduce((acc, val) => acc + val, 0)
+                    })
+                    setInvestedAmount(
+                      (Object.values(args?.investment_summary?.total_invested_per_stock) as number[])
+                        .reduce((acc, val) => acc + val, 0)
+                    )
+                    setState({
+                      ...state,
+                      available_cash: totalCash,
                     })
                     respond("Data rendered successfully")
                   }
@@ -150,12 +160,12 @@ export default function OpenStocksCanvas() {
     }
   })
 
-  const toggleComponentTree = () => {
-    setShowComponentTree(!showComponentTree)
-  }
+  // const toggleComponentTree = () => {
+  //   setShowComponentTree(!showComponentTree)
+  // }
 
-  const availableCash = totalCash - investedAmount
-  const currentPortfolioValue = currentState.currentPortfolioValue || investedAmount
+  // const availableCash = totalCash - investedAmount
+  // const currentPortfolioValue = currentState.currentPortfolioValue || investedAmount
 
 
   useEffect(() => {
@@ -163,7 +173,7 @@ export default function OpenStocksCanvas() {
   }, [])
 
   function getBenchmarkData() {
-    let a: PortfolioState = {
+    let result: PortfolioState = {
       id: "aapl-nvda",
       trigger: "apple nvidia",
       performanceData: [
@@ -181,8 +191,10 @@ export default function OpenStocksCanvas() {
       returnsData: [],
       bullInsights: [],
       bearInsights: [],
+      totalReturns : 0,
+      currentPortfolioValue : totalCash
     }
-    setCurrentState(a)
+    setCurrentState(result)
   }
 
 
@@ -191,7 +203,7 @@ export default function OpenStocksCanvas() {
     <div className="h-screen bg-[#FAFCFA] flex overflow-hidden">
       {/* Left Panel - Prompt Input */}
       <div className="w-85 border-r border-[#D8D8E5] bg-white flex-shrink-0">
-        <PromptPanel availableCash={availableCash} />
+        <PromptPanel availableCash={totalCash} />
       </div>
 
       {/* Center Panel - Generative Canvas */}
@@ -201,19 +213,20 @@ export default function OpenStocksCanvas() {
           <CashPanel
             totalCash={totalCash}
             investedAmount={investedAmount}
-            currentPortfolioValue={currentPortfolioValue}
+            currentPortfolioValue={(totalCash + investedAmount + currentState.totalReturns) || 0}
             onTotalCashChange={setTotalCash}
+            onStateCashChange={setState}
           />
         </div>
 
-        <div className="absolute top-4 right-4 z-20">
+        {/* <div className="absolute top-4 right-4 z-20">
           <button
             onClick={toggleComponentTree}
             className="px-3 py-1 text-xs font-semibold text-[#575758] bg-white border border-[#D8D8E5] rounded-md hover:bg-[#F0F0F4] transition-colors"
           >
             {showComponentTree ? "Hide Tree" : "Show Tree"}
           </button>
-        </div>
+        </div> */}
 
         <div className="pt-20 h-full">
           <GenerativeCanvas portfolioState={currentState} />

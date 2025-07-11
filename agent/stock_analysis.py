@@ -434,7 +434,7 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
                     {
                         "op": "replace",
                         "path": f"/investment_portfolio",
-                        "value": state["investment_portfolio"],
+                        "value": json.loads(state["investment_portfolio"]),
                     }
                 ],
             )
@@ -721,23 +721,7 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
             tool_call_id=state["messages"][-1].tool_calls[0].id,
         )
     )
-    model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
-    # response = await model.ainvoke(
-    #     [
-    #         {
-    #             "role": "developer",
-    #             "content": mod_prompt,
-    #         },
-    #         {
-    #             "role": "user",
-    #             "content": msg,
-    #         },
-    #     ],
-    #     config=config,
-    # )
-    # state["messages"].append(
-    #     AssistantMessage(role="assistant", content=response.content, id=str(uuid.uuid4()))
-    # )
+    
 
     state["messages"].append(
         AssistantMessage(
@@ -757,24 +741,8 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
             id=str(uuid.uuid4()),
         )
     )
-    # config.get("configurable").get("emit_event")(
-    #     StateDeltaEvent(
-    #         type=EventType.STATE_DELTA,
-    #         delta=[
-    #             {
-    #                 "op": "replace",
-    #                 "path": "/available_cash",
-    #                 "value": total_cash,
-    #             },
-    #             {
-    #                 "op": "replace",
-    #                 "path": "/investment_summary",
-    #                 "value": state["investment_summary"],
-    #             },
-    #         ],
-    #     )
-    # )
-    # await asyncio.sleep(0)
+   
+   
 
     return Command(goto="ui_decision", update=state)
 

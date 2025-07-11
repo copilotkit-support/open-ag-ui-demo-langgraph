@@ -42,7 +42,7 @@ export function LineChartComponent({ data, size = "normal" }: LineChartComponent
               }}
               formatter={(value: number, name: string) => [
                 `$${value.toLocaleString()}`,
-                name === "portfolio" ? "Portfolio" : "SPY",
+                name.toLowerCase() === "portfolio" ? "Portfolio" : "SPY",
               ]}
             />
             <Legend

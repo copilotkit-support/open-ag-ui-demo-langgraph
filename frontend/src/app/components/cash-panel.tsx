@@ -8,15 +8,16 @@ interface CashPanelProps {
   investedAmount: number
   currentPortfolioValue: number
   onTotalCashChange: (amount: number) => void
+  onStateCashChange: (state: any) => void
 }
 
-export function CashPanel({ totalCash, investedAmount, currentPortfolioValue, onTotalCashChange }: CashPanelProps) {
+export function CashPanel({ totalCash, investedAmount, currentPortfolioValue, onTotalCashChange, onStateCashChange }: CashPanelProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(totalCash.toString())
 
-  const availableCash = totalCash - investedAmount
+  // const availableCash = totalCash - investedAmount
   const investedPercentage = totalCash > 0 ? (investedAmount / totalCash) * 100 : 0
-  const fourYearReturn = currentPortfolioValue - investedAmount
+  const fourYearReturn = currentPortfolioValue - investedAmount - totalCash
   const fourYearReturnPercentage = investedAmount > 0 ? (fourYearReturn / investedAmount) * 100 : 0
 
   const handleEdit = () => {
@@ -28,6 +29,10 @@ export function CashPanel({ totalCash, investedAmount, currentPortfolioValue, on
     const newAmount = Number.parseInt(editValue.replace(/,/g, ""))
     if (!isNaN(newAmount) && newAmount >= 0) {
       onTotalCashChange(newAmount)
+      onStateCashChange((prevState: any) => ({
+        ...prevState,
+        available_cash: newAmount,
+      }))
     }
     setIsEditing(false)
   }
@@ -62,8 +67,8 @@ export function CashPanel({ totalCash, investedAmount, currentPortfolioValue, on
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="w-24 px-2 py-1 text-sm font-semibold border border-[#BEC9FF] rounded focus:outline-none focus:ring-1 focus:ring-[#BEC9FF]"
-                  onKeyPress={(e) => e.key === "Enter" && handleSave()}
+                  className="w-12 text-sm font-semibold text-[#030507] font-['Roobert']"
+                  onKeyDown={(e) => e.key === "Enter" && handleSave()}
                 />
                 <button onClick={handleSave} className="p-1 text-[#1B606F] hover:bg-[#86ECE4]/20 rounded">
                   <Check size={12} />
@@ -143,7 +148,7 @@ export function CashPanel({ totalCash, investedAmount, currentPortfolioValue, on
         </div>
 
         {/* Available Cash */}
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#D8D8E5] rounded-full flex items-center justify-center">
             <Wallet size={16} className="text-[#030507]" />
           </div>
@@ -157,7 +162,7 @@ export function CashPanel({ totalCash, investedAmount, currentPortfolioValue, on
               {formatCurrency(availableCash)}
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Investment Progress */}

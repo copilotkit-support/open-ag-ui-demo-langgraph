@@ -40,7 +40,9 @@ export function BarChartComponent({ data, size = "normal" }: BarChartComponentPr
               }}
               formatter={(value: number) => [`${value.toFixed(1)}%`, "Return"]}
             />
-            <Bar dataKey="return" fill="#86ECE4" radius={[2, 2, 0, 0]} />
+            <Bar onClick={(data,index) => {
+              console.log(data,index,"clicked")
+            }} dataKey="return" fill="#86ECE4" radius={[2, 2, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
