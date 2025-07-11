@@ -16,7 +16,7 @@ export function CashPanel({ totalCash, investedAmount, currentPortfolioValue, on
   const [editValue, setEditValue] = useState(totalCash.toString())
 
   // const availableCash = totalCash - investedAmount
-  const investedPercentage = totalCash > 0 ? (investedAmount / totalCash) * 100 : 0
+  const investedPercentage = totalCash > 0 ? (investedAmount / (totalCash + investedAmount)) * 100 : 0
   const fourYearReturn = currentPortfolioValue - investedAmount - totalCash
   const fourYearReturnPercentage = investedAmount > 0 ? (fourYearReturn / investedAmount) * 100 : 0
 

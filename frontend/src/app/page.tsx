@@ -5,10 +5,12 @@ import { PromptPanel } from "./components/prompt-panel"
 import { GenerativeCanvas } from "./components/generative-canvas"
 import { ComponentTree } from "./components/component-tree"
 import { CashPanel } from "./components/cash-panel"
-import { useCoAgent, useCopilotAction } from "@copilotkit/react-core"
+import { useCoAgent, useCopilotAction, useCopilotReadable } from "@copilotkit/react-core"
 import { BarChartComponent } from "@/app/components/chart-components/bar-chart"
 import { LineChartComponent } from "@/app/components/chart-components/line-chart"
 import { AllocationTableComponent } from "@/app/components/chart-components/allocation-table"
+import { useCopilotChatSuggestions } from "@copilotkit/react-ui"
+import { INVESTMENT_SUGGESTION_PROMPT } from "@/utils/prompts"
 
 export interface PortfolioState {
   id: string
@@ -40,9 +42,16 @@ export interface PortfolioState {
     description: string
     emoji: string
   }>
-  totalReturns : number
+  totalReturns: number
 }
 
+export interface SandBoxPortfolioState {
+  performanceData: Array<{
+    date: string
+    portfolio: number
+    spy: number
+  }>
+}
 export interface InvestmentPortfolio {
   ticker: string
   amount: number
@@ -58,10 +67,11 @@ export default function OpenStocksCanvas() {
     returnsData: [],
     bullInsights: [],
     bearInsights: [],
-    currentPortfolioValue : 0,
-    totalReturns : 0
+    currentPortfolioValue: 0,
+    totalReturns: 0
   })
-
+  const [sandBoxPortfolio, setSandBoxPortfolio] = useState<SandBoxPortfolioState[]>([])
+  const [selectedStock, setSelectedStock] = useState<string | null>(null)
   const [showComponentTree, setShowComponentTree] = useState(false)
   const [totalCash, setTotalCash] = useState(1000000)
   const [investedAmount, setInvestedAmount] = useState(0)
@@ -74,6 +84,10 @@ export default function OpenStocksCanvas() {
       investment_portfolio: [] as InvestmentPortfolio[]
     }
   })
+
+  useEffect(() => {
+    console.log(selectedStock, "selectedStock")
+  }, [selectedStock])
 
   useCopilotAction({
     name: "render_standard_charts_and_table",
@@ -124,7 +138,7 @@ export default function OpenStocksCanvas() {
                       bearInsights: args?.insights?.bearInsights || [],
                       currentPortfolioValue: args?.investment_summary?.total_value,
                       totalReturns: (Object.values(args?.investment_summary?.returns) as number[])
-                      .reduce((acc, val) => acc + val, 0)
+                        .reduce((acc, val) => acc + val, 0)
                     })
                     setInvestedAmount(
                       (Object.values(args?.investment_summary?.total_invested_per_stock) as number[])
@@ -134,7 +148,7 @@ export default function OpenStocksCanvas() {
                       ...state,
                       available_cash: totalCash,
                     })
-                    respond("Data rendered successfully")
+                    respond("Data rendered successfully. Provide summary of the investments by not making any tool calls")
                   }
                 }}
               >
@@ -145,7 +159,7 @@ export default function OpenStocksCanvas() {
                 onClick={() => {
                   debugger
                   if (respond) {
-                    respond("Data rendering rejected")
+                    respond("Data rendering rejected. Just give a summary of the rejected investments by not making any tool calls")
                   }
                 }}
               >
@@ -159,6 +173,57 @@ export default function OpenStocksCanvas() {
       )
     }
   })
+
+  useCopilotAction({
+    name: "render_custom_charts",
+    renderAndWaitForResponse: ({ args, respond, status }) => {
+      return (
+        <>
+          <LineChartComponent data={args?.investment_summary?.performanceData} size="small" />
+          <button hidden={status == "complete"}
+            className="mt-4 rounded-full px-6 py-2 bg-green-50 text-green-700 border border-green-200 shadow-sm hover:bg-green-100 transition-colors font-semibold text-sm"
+            onClick={() => {
+              debugger
+              if (respond) {
+                setSandBoxPortfolio([...sandBoxPortfolio, {
+                  performanceData: args?.investment_summary?.performanceData.map((item: any) => ({
+                    date: item.date,
+                    portfolio: item.portfolio,
+                    spy: 0
+                  })) || []
+                }])
+                respond("Data rendered successfully. Provide summary of the investments")
+              }
+            }}
+          >
+            Accept
+          </button>
+          <button hidden={status == "complete"}
+            className="rounded-full px-6 py-2 bg-red-50 text-red-700 border border-red-200 shadow-sm hover:bg-red-100 transition-colors font-semibold text-sm ml-2"
+            onClick={() => {
+              debugger
+              if (respond) {
+                respond("Data rendering rejected. Just give a summary of the rejected investments")
+              }
+            }}
+          >
+            Reject
+          </button>
+        </>
+      )
+    }
+  })
+
+  useCopilotReadable({
+    description: "This is the current state of the portfolio",
+    value: JSON.stringify(state.investment_portfolio)
+  })
+
+  useCopilotChatSuggestions({
+    available: selectedStock ? "disabled" : "enabled",
+    instructions: INVESTMENT_SUGGESTION_PROMPT,
+  },
+    [selectedStock])
 
   // const toggleComponentTree = () => {
   //   setShowComponentTree(!showComponentTree)
@@ -191,8 +256,8 @@ export default function OpenStocksCanvas() {
       returnsData: [],
       bullInsights: [],
       bearInsights: [],
-      totalReturns : 0,
-      currentPortfolioValue : totalCash
+      totalReturns: 0,
+      currentPortfolioValue: totalCash
     }
     setCurrentState(result)
   }
@@ -229,7 +294,7 @@ export default function OpenStocksCanvas() {
         </div> */}
 
         <div className="pt-20 h-full">
-          <GenerativeCanvas portfolioState={currentState} />
+          <GenerativeCanvas setSelectedStock={setSelectedStock} portfolioState={currentState} sandBoxPortfolio={sandBoxPortfolio} setSandBoxPortfolio={setSandBoxPortfolio} />
         </div>
       </div>
 

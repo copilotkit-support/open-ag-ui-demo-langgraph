@@ -5,13 +5,16 @@ import { AllocationTableComponent } from "./chart-components/allocation-table"
 import { InsightCardComponent } from "./chart-components/insight-card"
 import { SectionTitle } from "./chart-components/section-title"
 import { BarChartComponent } from "./chart-components/bar-chart"
-import type { PortfolioState } from "../page"
+import type { PortfolioState, SandBoxPortfolioState } from "../page"
 
 interface GenerativeCanvasProps {
   portfolioState: PortfolioState
+  setSelectedStock: (stock: string) => void
+  sandBoxPortfolio: SandBoxPortfolioState[]
+  setSandBoxPortfolio: (portfolio: SandBoxPortfolioState[]) => void
 }
 
-export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
+export function GenerativeCanvas({ portfolioState, setSelectedStock, sandBoxPortfolio, setSandBoxPortfolio }: GenerativeCanvasProps) {
   return (
     <div className="h-full overflow-auto">
       <div className="p-4 space-y-4 max-w-none">
@@ -61,7 +64,7 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
               {portfolioState.returnsData.length === 0 ? (
                 <div className="text-center text-sm text-gray-400 py-6">No returns data to show.</div>
               ) : (
-                <BarChartComponent data={portfolioState?.returnsData || []} />
+                <BarChartComponent data={portfolioState?.returnsData || []} onClick={setSelectedStock} />
               )}
             </div>
           </div>
@@ -104,6 +107,26 @@ export function GenerativeCanvas({ portfolioState }: GenerativeCanvasProps) {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Custom Charts */}
+        <div hidden={sandBoxPortfolio?.length > 0}>
+          <SectionTitle title="Custom Charts" />
+          <div className="mt-3">
+            {sandBoxPortfolio?.length === 0 ? (
+              <div className="text-center text-sm text-gray-400 py-6">No performance data to show.</div>
+            ) : (
+              <LineChartComponent
+                data={
+                  (portfolioState?.performanceData || []).map(d => ({
+                    ...d,
+                    portfolio: d.portfolio ?? 0,
+                    spy: d.spy ?? 0,
+                  }))
+                }
+              />
+            )}
           </div>
         </div>
       </div>

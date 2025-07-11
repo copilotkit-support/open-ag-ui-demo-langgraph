@@ -280,11 +280,16 @@ extract_relevant_data_from_user_prompt = {
                 "type": "string",
                 "description": "The interval of investment, e.g. '1d', '5d', '1mo', '3mo', '6mo', '1y'1d', '5d', '7d', '1mo', '3mo', '6mo', '1y', '2y', '3y', '4y', '5y'. If the user did not specify the interval, then assume it as 'single_shot'",
             },
+            "to_be_added_in_portfolio": {
+                "type": "boolean",
+                "description": "If user wants to add it in the current portfolio, then set it to true. If user wants to add it in the sandbox portfolio, then set it to false.",
+            },
         },
         "required": [
             "ticker_symbols",
             "investment_date",
             "amount_of_dollars_to_be_invested",
+            "to_be_added_in_portfolio",
         ],
     },
 }
@@ -349,15 +354,22 @@ generate_insights = {
 async def chat_node(state: AgentState, config: RunnableConfig):
     try:
 
-        model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
-        tools = [t.dict() for t in state["tools"]]
+        model = init_chat_model("gemini-2.5-flash", model_provider="google_genai")
+        # tools = [t.dict() for t in state["tools"]]
         messages = []
         for message in state["messages"]:
             match message.role:
                 case "user":
                     messages.append(HumanMessage(content=message.content))
                 case "system":
-                    messages.append(SystemMessage(content=system_prompt.replace("{PORTFOLIO_DATA_PLACEHOLDER}", json.dumps(state["investment_portfolio"]))))
+                    messages.append(
+                        SystemMessage(
+                            content=system_prompt.replace(
+                                "{PORTFOLIO_DATA_PLACEHOLDER}",
+                                json.dumps(state["investment_portfolio"]),
+                            )
+                        )
+                    )
                 case "assistant" | "ai":
                     tool_calls_converted = [
                         convert_tool_call_for_model(tc)
@@ -426,19 +438,27 @@ async def end_node(state: AgentState, config: RunnableConfig):
 async def simulation_node(state: AgentState, config: RunnableConfig):
     print("inside simulation node")
     arguments = json.loads(state["messages"][-1].tool_calls[0].function.arguments)
-    state["investment_portfolio"] = json.dumps([{"ticker": ticker, "amount" : arguments['amount_of_dollars_to_be_invested'][index]} for index,ticker in enumerate(arguments['ticker_symbols'])])
+    state["investment_portfolio"] = json.dumps(
+        [
+            {
+                "ticker": ticker,
+                "amount": arguments["amount_of_dollars_to_be_invested"][index],
+            }
+            for index, ticker in enumerate(arguments["ticker_symbols"])
+        ]
+    )
     config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "replace",
-                        "path": f"/investment_portfolio",
-                        "value": json.loads(state["investment_portfolio"]),
-                    }
-                ],
-            )
+        StateDeltaEvent(
+            type=EventType.STATE_DELTA,
+            delta=[
+                {
+                    "op": "replace",
+                    "path": f"/investment_portfolio",
+                    "value": json.loads(state["investment_portfolio"]),
+                }
+            ],
         )
+    )
     await asyncio.sleep(0)
     tickers = arguments["ticker_symbols"]
     investment_date = arguments["investment_date"]
@@ -721,7 +741,6 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
             tool_call_id=state["messages"][-1].tool_calls[0].id,
         )
     )
-    
 
     state["messages"].append(
         AssistantMessage(
@@ -741,14 +760,33 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
             id=str(uuid.uuid4()),
         )
     )
-   
-   
 
     return Command(goto="ui_decision", update=state)
 
 
 async def ui_decision_node(state: AgentState, config: RunnableConfig):
     print("inside ui decision node")
+    print(state["be_arguments"]["to_be_added_in_portfolio"])
+    # if not state["be_arguments"]["to_be_added_in_portfolio"]:
+    #     state["messages"].pop()
+    #     state["messages"].append(
+    #         AssistantMessage(
+    #             role="assistant",
+    #             tool_calls=[
+    #                 {
+    #                     "id": str(uuid.uuid4()),
+    #                     "type": "function",
+    #                     "function": {
+    #                         "name": "render_custom_charts",
+    #                         "arguments": json.dumps(
+    #                             {"investment_summary": state["investment_summary"]}
+    #                         ),
+    #                     },
+    #                 }
+    #             ],
+    #             id=str(uuid.uuid4()),
+    #         )
+    #     )
     return Command(goto="insights", update=state)
 
 
@@ -802,7 +840,7 @@ async def insights_node(state: AgentState, config: RunnableConfig):
         for n in news["negative"]:
             summary_str += f"    - {n['title']} ({n['url']})\n"
     # Present to AI model
-    model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
+    model = init_chat_model("gemini-2.5-flash", model_provider="google_genai")
     response = await model.bind_tools(generate_insights).ainvoke(
         [
             {"role": "system", "content": insights_prompt},
@@ -824,7 +862,7 @@ async def insights_node(state: AgentState, config: RunnableConfig):
     return Command(goto="end", update=state)
 
 
-def your_router_function(state: AgentState, config: RunnableConfig):
+def router_function1(state: AgentState, config: RunnableConfig):
     if (
         state["messages"][-1].tool_calls == []
         or state["messages"][-1].tool_calls is None
@@ -832,6 +870,13 @@ def your_router_function(state: AgentState, config: RunnableConfig):
         return "end"
     else:
         return "simulation"
+
+
+# def router_function2(state: AgentState, config: RunnableConfig):
+#     if state["be_arguments"]["to_be_added_in_portfolio"]:
+#         return "end"
+#     else:
+#         return "insights"
 
 
 async def agent_graph():
@@ -846,10 +891,11 @@ async def agent_graph():
     workflow.set_finish_point("end")
 
     workflow.add_edge(START, "chat")
-    workflow.add_conditional_edges("chat", your_router_function)
+    workflow.add_conditional_edges("chat", router_function1)
     workflow.add_edge("simulation", "cash_allocation")
     workflow.add_edge("cash_allocation", "ui_decision")
     workflow.add_edge("ui_decision", "insights")
+    # workflow.add_conditional_edges("ui_decision", router_function2)
     workflow.add_edge("insights", "end")
     workflow.add_edge("end", END)
     # from langgraph.checkpoint.memory import MemorySaver

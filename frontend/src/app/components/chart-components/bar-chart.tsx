@@ -10,9 +10,10 @@ interface BarChartData {
 interface BarChartComponentProps {
   data: BarChartData[]
   size?: "normal" | "small"
+  onClick?: (data: string) => void
 }
 
-export function BarChartComponent({ data, size = "normal" }: BarChartComponentProps) {
+export function BarChartComponent({ data, size = "normal", onClick }: BarChartComponentProps) {
   const height = size === "small" ? 80 : 160 // h-20 or h-40
   const padding = size === "small" ? "p-2" : "p-4"
   const fontSize = size === "small" ? 8 : 10
@@ -40,8 +41,13 @@ export function BarChartComponent({ data, size = "normal" }: BarChartComponentPr
               }}
               formatter={(value: number) => [`${value.toFixed(1)}%`, "Return"]}
             />
-            <Bar onClick={(data,index) => {
-              console.log(data,index,"clicked")
+            <Bar onClick={(data, index) => {
+              if (size === "normal") {
+                // @ts-ignore
+                console.log(data.payload, "clicked")
+                // @ts-ignore
+                onClick?.(data.payload.ticker as string)
+              }
             }} dataKey="return" fill="#86ECE4" radius={[2, 2, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
