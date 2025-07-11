@@ -354,7 +354,7 @@ generate_insights = {
 async def chat_node(state: AgentState, config: RunnableConfig):
     try:
 
-        model = init_chat_model("gemini-2.5-flash", model_provider="google_genai")
+        model = init_chat_model("gemini-2.5-pro", model_provider="google_genai")
         # tools = [t.dict() for t in state["tools"]]
         messages = []
         for message in state["messages"]:
@@ -841,7 +841,7 @@ async def insights_node(state: AgentState, config: RunnableConfig):
         for n in news["negative"]:
             summary_str += f"    - {n['title']} ({n['url']})\n"
     # Present to AI model
-    model = init_chat_model("gemini-2.5-flash", model_provider="google_genai")
+    model = init_chat_model("gemini-2.5-pro", model_provider="google_genai")
     response = await model.bind_tools(generate_insights).ainvoke(
         [
             {"role": "system", "content": insights_prompt},
