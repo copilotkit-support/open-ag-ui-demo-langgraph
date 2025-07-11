@@ -111,7 +111,7 @@ export function GenerativeCanvas({ portfolioState, setSelectedStock, sandBoxPort
         </div>
 
         {/* Custom Charts */}
-        <div hidden={sandBoxPortfolio?.length > 0}>
+        <div hidden={sandBoxPortfolio?.length == 0}>
           <SectionTitle title="Custom Charts" />
           <div className="mt-3">
             {sandBoxPortfolio?.length === 0 ? (
