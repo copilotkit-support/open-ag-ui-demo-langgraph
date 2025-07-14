@@ -39,6 +39,7 @@ class AgentState(CopilotKitState):
     available_cash: int
     investment_summary: dict
     investment_portfolio: list
+    tool_logs: list
 
 
 def convert_tool_call(tc):
@@ -64,25 +65,25 @@ async def get_stock_price_tool(
     tickers: list[str], config: RunnableConfig, period: str = "1d", interval: str = "1m"
 ) -> str:
     try:
-        config.get("configurable").get("tool_logs")["items"].append(
-            {"toolName": "GET_STOCK_PRICE", "status": "inProgress"}
-        )
-        config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "add",
-                        "path": "/items/-",
-                        "value": {
-                            "toolName": "GET_STOCK_PRICE",
-                            "status": "inProgress",
-                        },
-                    }
-                ],
-            )
-        )
-        await asyncio.sleep(2)
+        # config.get("configurable").get("tool_logs")["items"].append(
+        #     {"message": "GET_STOCK_PRICE", "status": "inProgress"}
+        # )
+        # config.get("configurable").get("emit_event")(
+        #     StateDeltaEvent(
+        #         type=EventType.STATE_DELTA,
+        #         delta=[
+        #             {
+        #                 "op": "add",
+        #                 "path": "/items/-",
+        #                 "value": {
+        #                     "message": "GET_STOCK_PRICE",
+        #                     "status": "inProgress",
+        #                 },
+        #             }
+        #         ],
+        #     )
+        # )
+        # await asyncio.sleep(2)
 
         tickers_list = json.loads(tickers)["tickers"]
         tikers = [yf.Ticker(ticker) for ticker in tickers_list]
@@ -109,20 +110,20 @@ async def get_stock_price_tool(
                     "revenue": revenue,
                 }
             )
-        index = len(config.get("configurable").get("tool_logs")["items"]) - 1
-        config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "replace",
-                        "path": f"/items/{index}/status",
-                        "value": "completed",
-                    }
-                ],
-            )
-        )
-        await asyncio.sleep(0)
+        # index = len(config.get("configurable").get("tool_logs")["items"]) - 1
+        # config.get("configurable").get("emit_event")(
+        #     StateDeltaEvent(
+        #         type=EventType.STATE_DELTA,
+        #         delta=[
+        #             {
+        #                 "op": "replace",
+        #                 "path": f"/items/{index}/status",
+        #                 "value": "completed",
+        #             }
+        #         ],
+        #     )
+        # )
+        # await asyncio.sleep(0)
         return json.dumps({"results": results})
     except Exception as e:
         print(e)
@@ -353,7 +354,27 @@ generate_insights = {
 
 async def chat_node(state: AgentState, config: RunnableConfig):
     try:
-
+        tool_log_id = str(uuid.uuid4())
+        state["tool_logs"].append(
+            {"id": tool_log_id, "message": "ANALYZE_USER_QUERY", "status": "processing"}
+        )
+        config.get("configurable").get("emit_event")(
+            StateDeltaEvent(
+                type=EventType.STATE_DELTA,
+                delta=[
+                    {
+                        "op": "add",
+                        "path": "/tool_logs/-",
+                        "value": {
+                            "message": "ANALYZE_USER_QUERY",
+                            "status": "processing",
+                            "id": tool_log_id
+                        },
+                    }
+                ],
+            )
+        )
+        await asyncio.sleep(0)
         model = init_chat_model("gemini-2.5-pro", model_provider="google_genai")
         # tools = [t.dict() for t in state["tools"]]
         messages = []
@@ -401,12 +422,28 @@ async def chat_node(state: AgentState, config: RunnableConfig):
             response = await model.bind_tools(
                 [extract_relevant_data_from_user_prompt]
             ).ainvoke(messages, config=config)
+            # async for chunk in response:
+            #     print(chunk)
             if response.tool_calls:
                 tool_calls = [convert_tool_call(tc) for tc in response.tool_calls]
                 a_message = AssistantMessage(
                     role="assistant", tool_calls=tool_calls, id=response.id
                 )
                 state["messages"].append(a_message)
+                index = len(state["tool_logs"]) - 1
+                config.get("configurable").get("emit_event")(
+                    StateDeltaEvent(
+                        type=EventType.STATE_DELTA,
+                        delta=[
+                            {
+                                "op": "replace",
+                                "path": f"/tool_logs/{index}/status",
+                                "value": "completed"
+                            }
+                        ],
+                    )
+                )
+                await asyncio.sleep(0)
                 return
             elif response.content == "" and response.tool_calls == []:
                 retry_counter += 1
@@ -415,6 +452,20 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                     id=response.id, content=response.content, role="assistant"
                 )
                 state["messages"].append(a_message)
+                index = len(state["tool_logs"]) - 1
+                config.get("configurable").get("emit_event")(
+                    StateDeltaEvent(
+                        type=EventType.STATE_DELTA,
+                        delta=[
+                            {
+                                "op": "replace",
+                                "path": f"/tool_logs/{index}/status",
+                                "value": "completed"
+                            }
+                        ],
+                    )
+                )
+                await asyncio.sleep(0)
                 return
         print("hello")
         a_message = AssistantMessage(
@@ -428,6 +479,20 @@ async def chat_node(state: AgentState, config: RunnableConfig):
         return Command(
             goto="end",
         )
+    index = len(state["tool_logs"]) - 1
+    config.get("configurable").get("emit_event")(
+        StateDeltaEvent(
+            type=EventType.STATE_DELTA,
+            delta=[
+                {
+                    "op": "replace",
+                    "path": f"/tool_logs/{index}/status",
+                    "value": "completed"
+                }
+            ],
+        )
+    )
+    await asyncio.sleep(0)
     return
 
 
@@ -437,6 +502,27 @@ async def end_node(state: AgentState, config: RunnableConfig):
 
 async def simulation_node(state: AgentState, config: RunnableConfig):
     print("inside simulation node")
+    tool_log_id = str(uuid.uuid4())
+    state["tool_logs"].append(
+            {"id": tool_log_id, "message": "GATHER_STOCK_DATA", "status": "processing"}
+    )
+    config.get("configurable").get("emit_event")(
+        StateDeltaEvent(
+            type=EventType.STATE_DELTA,
+            delta=[
+                {
+                    "op": "add",
+                    "path": "/tool_logs/-",
+                    "value": {
+                        "message": "GATHER_STOCK_DATA",
+                        "status": "processing",
+                        "id": tool_log_id
+                    },
+                }
+            ],
+        )
+    )
+    await asyncio.sleep(0)
     arguments = json.loads(state["messages"][-1].tool_calls[0].function.arguments)
     print("arguments", arguments)
     state["investment_portfolio"] = json.dumps(
@@ -460,7 +546,7 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
             ],
         )
     )
-    await asyncio.sleep(0)
+    await asyncio.sleep(2)
     tickers = arguments["ticker_symbols"]
     investment_date = arguments["investment_date"]
     current_year = datetime.now().year
@@ -479,11 +565,46 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
     state["be_stock_data"] = data["Close"]
     state["be_arguments"] = arguments
     print(state["be_stock_data"])
+    index = len(state["tool_logs"]) - 1
+    config.get("configurable").get("emit_event")(
+        StateDeltaEvent(
+            type=EventType.STATE_DELTA,
+            delta=[
+                {
+                    "op": "replace",
+                    "path": f"/tool_logs/{index}/status",
+                    "value": "completed"
+                }
+            ],
+        )
+    )
+    await asyncio.sleep(0)
     return Command(goto="cash_allocation", update=state)
 
 
 async def cash_allocation_node(state: AgentState, config: RunnableConfig):
     print("inside cash allocation node")
+    tool_log_id = str(uuid.uuid4())
+    state["tool_logs"].append(
+        {"id": tool_log_id, "message": "ALLOCATE_CASH", "status": "processing"}
+    )
+    config.get("configurable").get("emit_event")(
+        StateDeltaEvent(
+            type=EventType.STATE_DELTA,
+            delta=[
+                {
+                    "op": "add",
+                    "path": "/tool_logs/-",
+                    "value": {
+                        "message": "ALLOCATE_CASH",
+                        "status": "processing",
+                        "id": tool_log_id
+                    },
+                }
+            ],
+        )
+    )
+    await asyncio.sleep(2)
     import numpy as np
     import pandas as pd
 
@@ -761,7 +882,20 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
             id=str(uuid.uuid4()),
         )
     )
-
+    index = len(state["tool_logs"]) - 1
+    config.get("configurable").get("emit_event")(
+        StateDeltaEvent(
+            type=EventType.STATE_DELTA,
+            delta=[
+                {
+                    "op": "replace",
+                    "path": f"/tool_logs/{index}/status",
+                    "value": "completed"
+                }
+            ],
+        )
+    )
+    await asyncio.sleep(0)
     return Command(goto="ui_decision", update=state)
 
 
@@ -793,6 +927,27 @@ async def ui_decision_node(state: AgentState, config: RunnableConfig):
 
 async def insights_node(state: AgentState, config: RunnableConfig):
     print("inside insights node")
+    tool_log_id = str(uuid.uuid4())
+    state["tool_logs"].append(
+        {"id": tool_log_id, "message": "EXTRACT_KEY_INSIGHTS", "status": "processing"}
+    )
+    config.get("configurable").get("emit_event")(
+        StateDeltaEvent(
+            type=EventType.STATE_DELTA,
+            delta=[
+                {
+                    "op": "add",
+                    "path": "/tool_logs/-",
+                    "value": {
+                        "message": "EXTRACT_KEY_INSIGHTS",
+                        "status": "processing",
+                        "id": tool_log_id
+                    },
+                }
+            ],
+        )
+    )
+    await asyncio.sleep(0)
     tavily_api_key = os.getenv("TAVILY_API_KEY")
     if not tavily_api_key:
         print("TAVILY_API_KEY not set in environment.")
@@ -859,7 +1014,20 @@ async def insights_node(state: AgentState, config: RunnableConfig):
         state["messages"][-1].tool_calls[0].function.arguments = json.dumps(args_dict)
     else:
         state["insights"] = {}
-
+    index = len(state["tool_logs"]) - 1
+    config.get("configurable").get("emit_event")(
+        StateDeltaEvent(
+            type=EventType.STATE_DELTA,
+            delta=[
+                {
+                    "op": "replace",
+                    "path": f"/tool_logs/{index}/status",
+                    "value": "completed"
+                }
+            ],
+        )
+    )
+    await asyncio.sleep(0)
     return Command(goto="end", update=state)
 
 

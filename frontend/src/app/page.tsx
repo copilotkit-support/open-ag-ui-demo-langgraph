@@ -5,12 +5,13 @@ import { PromptPanel } from "./components/prompt-panel"
 import { GenerativeCanvas } from "./components/generative-canvas"
 import { ComponentTree } from "./components/component-tree"
 import { CashPanel } from "./components/cash-panel"
-import { useCoAgent, useCopilotAction, useCopilotReadable } from "@copilotkit/react-core"
+import { useCoAgent, useCoAgentStateRender, useCopilotAction, useCopilotReadable } from "@copilotkit/react-core"
 import { BarChartComponent } from "@/app/components/chart-components/bar-chart"
 import { LineChartComponent } from "@/app/components/chart-components/line-chart"
 import { AllocationTableComponent } from "@/app/components/chart-components/allocation-table"
 import { useCopilotChatSuggestions } from "@copilotkit/react-ui"
 import { INVESTMENT_SUGGESTION_PROMPT } from "@/utils/prompts"
+import { ToolLogs } from "./components/tool-logs"
 
 export interface PortfolioState {
   id: string
@@ -83,6 +84,11 @@ export default function OpenStocksCanvas() {
       investment_summary: {} as any,
       investment_portfolio: [] as InvestmentPortfolio[]
     }
+  })
+
+  useCoAgentStateRender({
+    name: "langgraphAgent",
+    render: ({state}) => <ToolLogs logs={state.tool_logs} />
   })
 
   useEffect(() => {

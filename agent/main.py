@@ -19,6 +19,7 @@ from ag_ui.core import (
     ToolCallStartEvent,
     ToolCallEndEvent,
     ToolCallArgsEvent,
+    StateDeltaEvent
 )
 from ag_ui.encoder import EventEncoder
 from stock_analysis import agent_graph
@@ -40,6 +41,7 @@ class AgentState(CopilotKitState):
     be_arguments: dict
     available_cash: int
     investment_summary : dict
+    tool_logs : list
 
 @app.post("/langgraph-agent")
 async def langgraph_agent(input_data: RunAgentInput):
@@ -68,7 +70,8 @@ async def langgraph_agent(input_data: RunAgentInput):
                     snapshot={
                         "available_cash": input_data.state["available_cash"],
                         "investment_summary" : input_data.state["investment_summary"],
-                        "investment_portfolio" : input_data.state["investment_portfolio"]
+                        "investment_portfolio" : input_data.state["investment_portfolio"],
+                        "tool_logs" : []
                     }
                 )
             )
@@ -78,7 +81,8 @@ async def langgraph_agent(input_data: RunAgentInput):
                 be_stock_data=None,
                 be_arguments=None,
                 available_cash=input_data.state["available_cash"],
-                investment_portfolio=input_data.state["investment_portfolio"]
+                investment_portfolio=input_data.state["investment_portfolio"],
+                tool_logs=[]
             )
             agent = await agent_graph()
 
@@ -96,15 +100,18 @@ async def langgraph_agent(input_data: RunAgentInput):
                     if agent_task.done():
                         break
 
-            # yield encoder.encode(
-            # StateSnapshotEvent(
-            #     type=EventType.STATE_SNAPSHOT,
-            #     snapshot={
-            #         "available_cash": state['available_cash'],
-            #         "investment_summary" : state['investment_summary'],
-            #     }
-            # )
-            # )
+            yield encoder.encode(
+            StateDeltaEvent(
+                type=EventType.STATE_DELTA,
+                delta=[
+                    {
+                        "op": "replace",
+                        "path": "/tool_logs",
+                        "value": []
+                    }
+                ]
+            )
+            )
             if state["messages"][-1].role == "assistant":
                 if state["messages"][-1].tool_calls:
                     # for tool_call in state['messages'][-1].tool_calls:
@@ -161,7 +168,7 @@ async def langgraph_agent(input_data: RunAgentInput):
                                     delta=part,
                                 )
                             )
-                            await asyncio.sleep(0.1)
+                            await asyncio.sleep(0.5)
                     else:
                         yield encoder.encode(
                             TextMessageContentEvent(
