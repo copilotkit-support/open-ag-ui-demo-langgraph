@@ -356,7 +356,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
     try:
         tool_log_id = str(uuid.uuid4())
         state["tool_logs"].append(
-            {"id": tool_log_id, "message": "ANALYZE_USER_QUERY", "status": "processing"}
+            {"id": tool_log_id, "message": "Analyzing user query", "status": "processing"}
         )
         config.get("configurable").get("emit_event")(
             StateDeltaEvent(
@@ -366,7 +366,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                         "op": "add",
                         "path": "/tool_logs/-",
                         "value": {
-                            "message": "ANALYZE_USER_QUERY",
+                            "message": "Analyzing user query",
                             "status": "processing",
                             "id": tool_log_id
                         },
@@ -504,7 +504,7 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
     print("inside simulation node")
     tool_log_id = str(uuid.uuid4())
     state["tool_logs"].append(
-            {"id": tool_log_id, "message": "GATHER_STOCK_DATA", "status": "processing"}
+            {"id": tool_log_id, "message": "Gathering stock data", "status": "processing"}
     )
     config.get("configurable").get("emit_event")(
         StateDeltaEvent(
@@ -514,7 +514,7 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
                     "op": "add",
                     "path": "/tool_logs/-",
                     "value": {
-                        "message": "GATHER_STOCK_DATA",
+                        "message": "Gathering stock data",
                         "status": "processing",
                         "id": tool_log_id
                     },
@@ -586,7 +586,7 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
     print("inside cash allocation node")
     tool_log_id = str(uuid.uuid4())
     state["tool_logs"].append(
-        {"id": tool_log_id, "message": "ALLOCATE_CASH", "status": "processing"}
+        {"id": tool_log_id, "message": "Allocating cash", "status": "processing"}
     )
     config.get("configurable").get("emit_event")(
         StateDeltaEvent(
@@ -596,7 +596,7 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
                     "op": "add",
                     "path": "/tool_logs/-",
                     "value": {
-                        "message": "ALLOCATE_CASH",
+                        "message": "Allocating cash",
                         "status": "processing",
                         "id": tool_log_id
                     },
@@ -929,7 +929,7 @@ async def insights_node(state: AgentState, config: RunnableConfig):
     print("inside insights node")
     tool_log_id = str(uuid.uuid4())
     state["tool_logs"].append(
-        {"id": tool_log_id, "message": "EXTRACT_KEY_INSIGHTS", "status": "processing"}
+        {"id": tool_log_id, "message": "Extracting key insights", "status": "processing"}
     )
     config.get("configurable").get("emit_event")(
         StateDeltaEvent(
@@ -939,7 +939,7 @@ async def insights_node(state: AgentState, config: RunnableConfig):
                     "op": "add",
                     "path": "/tool_logs/-",
                     "value": {
-                        "message": "EXTRACT_KEY_INSIGHTS",
+                        "message": "Extracting key insights",
                         "status": "processing",
                         "id": tool_log_id
                     },
