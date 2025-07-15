@@ -16,8 +16,6 @@ from prompts import system_prompt, insights_prompt
 from datetime import datetime
 from typing import Any
 import uuid
-from tavily import TavilyClient
-import os
 
 load_dotenv()
 
