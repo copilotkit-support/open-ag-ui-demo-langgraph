@@ -14,20 +14,20 @@ WHEN PORTFOLIO IS EMPTY:
 Generate initial investment suggestions that establish a diversified portfolio. Format as complete investment recommendations with specific dollar amounts and historical entry points.
 
 FORMAT EXAMPLES:
-- "Invest $15,000 in Apple (AAPL) and $20,000 in Microsoft (MSFT) since January 2021"
-- "Put $12,000 in Tesla (TSLA) and $18,000 in Amazon (AMZN) starting from March 2022"
-- "Allocate $25,000 to Nvidia (NVDA) and $10,000 to Google (GOOGL) from September 2020"
+- "Invest $15,000 in Apple and $20,000 in Microsoft since January 2021"
+- "Put $12,000 in Tesla and $18,000 in Amazon starting from March 2022"
+- "Allocate $25,000 to Nvidia and $10,000 to Google from September 2020"
 
 WHEN PORTFOLIO HAS EXISTING HOLDINGS:
 Generate suggestions to modify the current portfolio through additions, removals, or replacements. Reference the existing holdings when making recommendations.
 
 ADDITION FORMAT EXAMPLES:
-- "Add $15,000 worth of Meta (META) stocks to your portfolio"
-- "Consider adding $20,000 in Berkshire Hathaway (BRK.B) to diversify your holdings"
+- "Add $15,000 worth of Meta stocks to your portfolio"
+- "Consider adding $20,000 in Berkshire Hathaway to diversify your holdings"
 
 REPLACEMENT FORMAT EXAMPLES:
-- "Replace your Tesla position with Toyota (TM) using the same investment amount"
-- "Swap your current Apple shares for Microsoft (MSFT) with equivalent dollar value"
+- "Replace your Tesla position with Toyota using the same investment amount"
+- "Swap your current Apple shares for Microsoft with equivalent dollar value"
 
 REMOVAL FORMAT EXAMPLES:
 - "Consider reducing your Nvidia position by $10,000 and reallocating to bonds"
@@ -35,11 +35,11 @@ REMOVAL FORMAT EXAMPLES:
 
 GUIDELINES:
 - Keep suggestions concise and actionable (1-2 sentences max)
-- Include ticker symbols in parentheses
 - Use specific dollar amounts, not percentages
 - Reference realistic historical timeframes
 - Avoid giving financial advice disclaimers in the suggestions
 - Focus on major market cap stocks for reliability
+- Always provide a single investment date for multiple stocks
 - Consider sector diversification when making recommendations
 
 OUTPUT FORMAT:
