@@ -550,6 +550,9 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
     tickers = arguments["ticker_symbols"]
     investment_date = arguments["investment_date"]
     current_year = datetime.now().year
+    if( current_year - int(investment_date[:4]) > 4  ):
+        print("investment date is more than 4 years ago")
+        investment_date = f"{current_year - 4}-01-01"
     if current_year - int(investment_date[:4]) == 0:
         history_period = "1y"
     else:

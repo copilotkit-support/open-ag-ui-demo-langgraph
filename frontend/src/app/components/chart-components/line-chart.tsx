@@ -36,6 +36,7 @@ export function LineChartComponent({ data, size = "normal" }: LineChartComponent
               contentStyle={{
                 backgroundColor: "white",
                 border: "1px solid #D8D8E5",
+                color: "#575758",
                 borderRadius: "8px",
                 fontSize: tooltipFontSize,
                 fontFamily: "Plus Jakarta Sans",

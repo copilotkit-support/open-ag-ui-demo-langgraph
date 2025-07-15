@@ -37,7 +37,7 @@ export function PromptPanel({ availableCash }: PromptPanelProps) {
             </div>
           </div>
         </div>
-        <p className="text-xs text-[#575758]">Chat with AI to create portfolio visualizations</p>
+        <p className="text-xs text-[#575758]">Interact with the LangGraph-powered AI agent for portfolio visualization and analysis</p>
 
         {/* Available Cash Display */}
         <div className="mt-3 p-2 bg-[#86ECE4]/10 rounded-lg">
@@ -47,7 +47,7 @@ export function PromptPanel({ availableCash }: PromptPanelProps) {
       </div>
       <CopilotChat className="h-[78vh] p-2" labels={
         {
-          initial : `I am designed to analyze investment opportunities and track stock performance over time. How can I help you with your investment query? For example, you can ask me to analyze a stock like "Invest in Apple with 10k dollars since Jan 2023"`
+          initial : `I am a LangGraph AI agent designed to analyze investment opportunities and track stock performance over time. How can I help you with your investment query? For example, you can ask me to analyze a stock like "Invest in Apple with 10k dollars since Jan 2023". \n\nNote: The AI agent has access to stock data from the past 4 years only`
         }
       } />
 

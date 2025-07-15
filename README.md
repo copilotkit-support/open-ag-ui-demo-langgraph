@@ -15,16 +15,16 @@ A demo project with a Next.js frontend and a FastAPI-based backend agent for sto
 
 ### 1. Environment Configuration
 
-Create a `.env` file in each relevant directory as needed. Example placeholders:
+Create a `.env` file in each relevant directory as needed. 
 
 #### Backend (`agent/.env`):
 ```env
-OPENAI_API_KEY=<<your-openai-key-here>>
+GOOGLE_API_KEY=<<your-gemini-key-here>>
 ```
 
 #### Frontend (`frontend/.env`):
 ```env
-OPENAI_API_KEY=<<your-openai-key-here>>
+GOOGLE_API_KEY=<<your-gemini-key-here>>
 ```
 
 ---
@@ -54,4 +54,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to view the 
 ## Notes
 - Ensure the backend agent is running before using the frontend.
 - Update environment variables as needed for your deployment.
-- For more details, see the `frontend/README.md` and `agent/README.md` files.
+
+---
+
+### Hosted URL : https://open-ag-ui-demo.vercel.app/
