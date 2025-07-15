@@ -91,10 +91,6 @@ export default function OpenStocksCanvas() {
     render: ({state}) => <ToolLogs logs={state.tool_logs} />
   })
 
-  useEffect(() => {
-    console.log(selectedStock, "selectedStock")
-  }, [selectedStock])
-
   useCopilotAction({
     name: "render_standard_charts_and_table",
     description: "This is an action to render a standard chart and table. The chart can be a bar chart or a line chart. The table can be a table of data.",
