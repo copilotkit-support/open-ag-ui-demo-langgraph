@@ -7,14 +7,10 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import Command
 import yfinance as yf
 from copilotkit import CopilotKitState
-from langchain_openai import ChatOpenAI
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
 import json
-
-# import yfinance as yf
 import pandas as pd
-import requests
 import asyncio
 from prompts import system_prompt, insights_prompt
 from datetime import datetime
@@ -61,195 +57,9 @@ def convert_tool_call_for_model(tc):
     }
 
 
-async def get_stock_price_tool(
-    tickers: list[str], config: RunnableConfig, period: str = "1d", interval: str = "1m"
-) -> str:
-    try:
-        # config.get("configurable").get("tool_logs")["items"].append(
-        #     {"message": "GET_STOCK_PRICE", "status": "inProgress"}
-        # )
-        # config.get("configurable").get("emit_event")(
-        #     StateDeltaEvent(
-        #         type=EventType.STATE_DELTA,
-        #         delta=[
-        #             {
-        #                 "op": "add",
-        #                 "path": "/items/-",
-        #                 "value": {
-        #                     "message": "GET_STOCK_PRICE",
-        #                     "status": "inProgress",
-        #                 },
-        #             }
-        #         ],
-        #     )
-        # )
-        # await asyncio.sleep(2)
-
-        tickers_list = json.loads(tickers)["tickers"]
-        tikers = [yf.Ticker(ticker) for ticker in tickers_list]
-        results = []
-        for ticker_obj, symbol in zip(tikers, tickers_list):
-            print(json.loads(tickers)["interval"], "intervalintervalinterval")
-            hist = ticker_obj.history(
-                period=json.loads(tickers)["period"],
-                interval=json.loads(tickers)["interval"],
-            )
-            info = ticker_obj.info
-            price = [
-                {"date": str(hist.index[i].date()), "close": hist["Close"].iloc[i]}
-                for i in range(len(hist))
-            ]
-            company_name = info.get("longName", "N/A")
-            revenue = info.get("totalRevenue", "N/A")
-
-            results.append(
-                {
-                    "ticker": symbol,
-                    "price": price,
-                    "company_name": company_name,
-                    "revenue": revenue,
-                }
-            )
-        # index = len(config.get("configurable").get("tool_logs")["items"]) - 1
-        # config.get("configurable").get("emit_event")(
-        #     StateDeltaEvent(
-        #         type=EventType.STATE_DELTA,
-        #         delta=[
-        #             {
-        #                 "op": "replace",
-        #                 "path": f"/items/{index}/status",
-        #                 "value": "completed",
-        #             }
-        #         ],
-        #     )
-        # )
-        # await asyncio.sleep(0)
-        return json.dumps({"results": results})
-    except Exception as e:
-        print(e)
-        return f"Error: {e}"
 
 
-async def get_revenue_data_tool(tickers: list[str], config: RunnableConfig) -> str:
-    try:
-        config.get("configurable").get("tool_logs")["items"].append(
-            {"toolName": "GET_REVENUE_DATA", "status": "inProgress"}
-        )
-        config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "add",
-                        "path": "/items/-",
-                        "value": {
-                            "toolName": "GET_REVENUE_DATA",
-                            "status": "inProgress",
-                        },
-                    }
-                ],
-            )
-        )
-        await asyncio.sleep(2)
-        tickers_list = json.loads(tickers)["tickers"]
-        tikers = [yf.Ticker(ticker) for ticker in tickers_list]
-        results = []
-        for ticker_obj, symbol in zip(tikers, tickers_list):
-            info = ticker_obj.info
-            company_name = info.get("longName", "N/A")
-            # Get annual financials (income statement)
-            financials = ticker_obj.financials
-            # financials is a DataFrame with columns as years (ending date)
-            # Revenue is usually under 'Total Revenue' or 'TotalRevenue'
-            revenue_row = None
-            for key in ["Total Revenue", "TotalRevenue"]:
-                if key in financials.index:
-                    revenue_row = financials.loc[key]
-                    break
-            if revenue_row is not None:
-                # Get the last 5 years (or less if not available)
-                revenue_dict = {
-                    str(year.year): (
-                        int(revenue_row[year])
-                        if not pd.isna(revenue_row[year])
-                        else None
-                    )
-                    for year in revenue_row.index[:5]
-                }
-            else:
-                revenue_dict = {}
-            results.append(
-                {
-                    "ticker": symbol,
-                    "company_name": company_name,
-                    "revenue_by_year": revenue_dict,
-                }
-            )
-        index = len(config.get("configurable").get("tool_logs")["items"]) - 1
-        config.get("configurable").get("emit_event")(
-            StateDeltaEvent(
-                type=EventType.STATE_DELTA,
-                delta=[
-                    {
-                        "op": "replace",
-                        "path": f"/items/{index}/status",
-                        "value": "completed",
-                    }
-                ],
-            )
-        )
-        await asyncio.sleep(0)
-        return json.dumps({"results": results})
-    except Exception as e:
-        print(e)
-        return f"Error: {e}"
 
-
-get_stock_price = {
-    "name": "get_stock_price",
-    "description": "Get the stock prices over a period of specific time of Respective ticker symbols.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "tickers": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "description": "A stock ticker symbol, e.g. 'AAPL', 'GOOGL'.",
-                },
-                "description": "A list of stock ticker symbols, e.g. ['AAPL', 'GOOGL'].",
-            },
-            "period": {
-                "type": "string",
-                "description": "The period of time to get the stock prices for, e.g. '1d', '5d', '1mo', '3mo', '6mo', '1y'1d', '5d', '7d', '1mo', '3mo', '6mo', '1y', '2y', '3y', '4y', '5y'.",
-            },
-            "interval": {
-                "type": "string",
-                "description": "The interval of time to get the stock prices for, e.g. '1m', '5m', '15m', '30m', '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo'. You itself choose the interval based on the period of time you want to get the stock prices for. If the period is small like 1d, then choose the interval as '1m' or '5m' or '15m' or '30m' or '60m' or '90m' or '1h'. If the period is large like 1y, then choose the interval as '1mo' or '3mo'. If it like more than 1y, then choose the interval as '6mo'.",
-            },
-        },
-        "required": ["tickers", "period", "interval"],
-    },
-}
-
-get_revenue_data = {
-    "name": "get_revenue_data",
-    "description": "Get the revenue data of Respective ticker symbols.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "tickers": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "description": "A stock ticker symbol, e.g. 'AAPL', 'GOOGL'.",
-                },
-                "description": "A list of stock ticker symbols, e.g. ['AAPL', 'GOOGL'].",
-            }
-        },
-        "required": ["tickers"],
-    },
-}
 
 extract_relevant_data_from_user_prompt = {
     "name": "extract_relevant_data_from_user_prompt",
@@ -901,33 +711,6 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
     await asyncio.sleep(0)
     return Command(goto="ui_decision", update=state)
 
-
-async def ui_decision_node(state: AgentState, config: RunnableConfig):
-    print("inside ui decision node")
-    print(state["be_arguments"]["to_be_added_in_portfolio"])
-    # if not state["be_arguments"]["to_be_added_in_portfolio"]:
-    #     state["messages"].pop()
-    #     state["messages"].append(
-    #         AssistantMessage(
-    #             role="assistant",
-    #             tool_calls=[
-    #                 {
-    #                     "id": str(uuid.uuid4()),
-    #                     "type": "function",
-    #                     "function": {
-    #                         "name": "render_custom_charts",
-    #                         "arguments": json.dumps(
-    #                             {"investment_summary": state["investment_summary"]}
-    #                         ),
-    #                     },
-    #                 }
-    #             ],
-    #             id=str(uuid.uuid4()),
-    #         )
-    #     )
-    return Command(goto="insights", update=state)
-
-
 async def insights_node(state: AgentState, config: RunnableConfig):
     print("inside insights node")
     tool_log_id = str(uuid.uuid4())
@@ -951,59 +734,14 @@ async def insights_node(state: AgentState, config: RunnableConfig):
         )
     )
     await asyncio.sleep(0)
-    tavily_api_key = os.getenv("TAVILY_API_KEY")
-    if not tavily_api_key:
-        print("TAVILY_API_KEY not set in environment.")
-        return Command(goto="end", update=state)
-    tavily_client = TavilyClient(api_key=tavily_api_key)
     args = state.get("be_arguments") or state.get("arguments")
     tickers = args.get("ticker_symbols", [])
-    news_summary = {}
-    for ticker in tickers:
-        try:
-            pos_results = tavily_client.search(
-                f"good news about {ticker} stock", topic="news", max_results=2
-            )
-            neg_results = tavily_client.search(
-                f"bad news about {ticker} stock", topic="news", max_results=2
-            )
-            news_summary[ticker] = {
-                "positive": [
-                    {
-                        "title": item["title"],
-                        "url": item["url"],
-                        "content": item.get("content", ""),
-                    }
-                    for item in pos_results.get("results", [])
-                ],
-                "negative": [
-                    {
-                        "title": item["title"],
-                        "url": item["url"],
-                        "content": item.get("content", ""),
-                    }
-                    for item in neg_results.get("results", [])
-                ],
-            }
-        except Exception as e:
-            print(f"Error fetching news for {ticker}: {e}")
-            news_summary[ticker] = {"positive": [], "negative": []}
-    # Compose a summary string for the AI model
-    summary_str = "Stock News Insights:\n"
-    for ticker, news in news_summary.items():
-        summary_str += f"\nTicker: {ticker}\n"
-        summary_str += "  Positive News:\n"
-        for n in news["positive"]:
-            summary_str += f"    - {n['title']} ({n['url']})\n"
-        summary_str += "  Negative News:\n"
-        for n in news["negative"]:
-            summary_str += f"    - {n['title']} ({n['url']})\n"
-    # Present to AI model
+    
     model = init_chat_model("gemini-2.5-pro", model_provider="google_genai")
     response = await model.bind_tools(generate_insights).ainvoke(
         [
             {"role": "system", "content": insights_prompt},
-            {"role": "user", "content": summary_str},
+            {"role": "user", "content": tickers},
         ],
         config=config,
     )
@@ -1044,19 +782,11 @@ def router_function1(state: AgentState, config: RunnableConfig):
         return "simulation"
 
 
-# def router_function2(state: AgentState, config: RunnableConfig):
-#     if state["be_arguments"]["to_be_added_in_portfolio"]:
-#         return "end"
-#     else:
-#         return "insights"
-
-
 async def agent_graph():
     workflow = StateGraph(AgentState)
     workflow.add_node("chat", chat_node)
     workflow.add_node("simulation", simulation_node)
     workflow.add_node("cash_allocation", cash_allocation_node)
-    workflow.add_node("ui_decision", ui_decision_node)
     workflow.add_node("insights", insights_node)
     workflow.add_node("end", end_node)
     workflow.set_entry_point("chat")
@@ -1065,9 +795,7 @@ async def agent_graph():
     workflow.add_edge(START, "chat")
     workflow.add_conditional_edges("chat", router_function1)
     workflow.add_edge("simulation", "cash_allocation")
-    workflow.add_edge("cash_allocation", "ui_decision")
-    workflow.add_edge("ui_decision", "insights")
-    # workflow.add_conditional_edges("ui_decision", router_function2)
+    workflow.add_edge("cash_allocation", "insights")
     workflow.add_edge("insights", "end")
     workflow.add_edge("end", END)
     # from langgraph.checkpoint.memory import MemorySaver

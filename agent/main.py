@@ -1,14 +1,12 @@
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse  # For streaming responses
-from pydantic import BaseModel
 import uuid
-from typing import Dict, List, Any, Optional
+from typing import Any
 import os
 import uvicorn
 import asyncio
 from ag_ui.core import (
     RunAgentInput,
-    Message,
     StateSnapshotEvent,
     EventType,
     RunStartedEvent,
@@ -24,7 +22,6 @@ from ag_ui.core import (
 from ag_ui.encoder import EventEncoder
 from stock_analysis import agent_graph
 from copilotkit import CopilotKitState
-from datetime import datetime
 
 app = FastAPI()
 
