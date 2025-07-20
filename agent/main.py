@@ -150,8 +150,8 @@ async def langgraph_agent(input_data: RunAgentInput):
                     # Only send content event if content is not empty
                     if state["messages"][-1].content:
                         content = state["messages"][-1].content
-                        # Split content into 5 parts
-                        n_parts = 5
+                        # Split content into 100 parts
+                        n_parts = 100
                         part_length = max(1, len(content) // n_parts)
                         parts = [content[i:i+part_length] for i in range(0, len(content), part_length)]
                         # If splitting results in more than 5 due to rounding, merge last parts
@@ -165,7 +165,7 @@ async def langgraph_agent(input_data: RunAgentInput):
                                     delta=part,
                                 )
                             )
-                            await asyncio.sleep(0.5)
+                            await asyncio.sleep(0.05)
                     else:
                         yield encoder.encode(
                             TextMessageContentEvent(

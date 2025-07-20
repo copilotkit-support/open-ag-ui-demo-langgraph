@@ -55,10 +55,6 @@ def convert_tool_call_for_model(tc):
     }
 
 
-
-
-
-
 extract_relevant_data_from_user_prompt = {
     "name": "extract_relevant_data_from_user_prompt",
     "description": "Gets the data like ticker symbols, amount of dollars to be invested, interval of investment.",
@@ -164,7 +160,11 @@ async def chat_node(state: AgentState, config: RunnableConfig):
     try:
         tool_log_id = str(uuid.uuid4())
         state["tool_logs"].append(
-            {"id": tool_log_id, "message": "Analyzing user query", "status": "processing"}
+            {
+                "id": tool_log_id,
+                "message": "Analyzing user query",
+                "status": "processing",
+            }
         )
         config.get("configurable").get("emit_event")(
             StateDeltaEvent(
@@ -176,7 +176,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                         "value": {
                             "message": "Analyzing user query",
                             "status": "processing",
-                            "id": tool_log_id
+                            "id": tool_log_id,
                         },
                     }
                 ],
@@ -227,9 +227,14 @@ async def chat_node(state: AgentState, config: RunnableConfig):
             if retry_counter > 3:
                 print("retry_counter", retry_counter)
                 break
-            response = await model.bind_tools(
-                [extract_relevant_data_from_user_prompt]
-            ).ainvoke(messages, config=config)
+
+            if messages[-1].type == "human":
+                response = await model.bind_tools(
+                    [extract_relevant_data_from_user_prompt]
+                ).ainvoke(messages, config=config)
+            else:
+                response = await model.ainvoke(messages, config=config)
+
             # async for chunk in response:
             #     print(chunk)
             if response.tool_calls:
@@ -246,7 +251,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                             {
                                 "op": "replace",
                                 "path": f"/tool_logs/{index}/status",
-                                "value": "completed"
+                                "value": "completed",
                             }
                         ],
                     )
@@ -268,7 +273,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                             {
                                 "op": "replace",
                                 "path": f"/tool_logs/{index}/status",
-                                "value": "completed"
+                                "value": "completed",
                             }
                         ],
                     )
@@ -295,7 +300,7 @@ async def chat_node(state: AgentState, config: RunnableConfig):
                 {
                     "op": "replace",
                     "path": f"/tool_logs/{index}/status",
-                    "value": "completed"
+                    "value": "completed",
                 }
             ],
         )
@@ -312,7 +317,7 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
     print("inside simulation node")
     tool_log_id = str(uuid.uuid4())
     state["tool_logs"].append(
-            {"id": tool_log_id, "message": "Gathering stock data", "status": "processing"}
+        {"id": tool_log_id, "message": "Gathering stock data", "status": "processing"}
     )
     config.get("configurable").get("emit_event")(
         StateDeltaEvent(
@@ -324,7 +329,7 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
                     "value": {
                         "message": "Gathering stock data",
                         "status": "processing",
-                        "id": tool_log_id
+                        "id": tool_log_id,
                     },
                 }
             ],
@@ -358,7 +363,7 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
     tickers = arguments["ticker_symbols"]
     investment_date = arguments["investment_date"]
     current_year = datetime.now().year
-    if( current_year - int(investment_date[:4]) > 4  ):
+    if current_year - int(investment_date[:4]) > 4:
         print("investment date is more than 4 years ago")
         investment_date = f"{current_year - 4}-01-01"
     if current_year - int(investment_date[:4]) == 0:
@@ -384,7 +389,7 @@ async def simulation_node(state: AgentState, config: RunnableConfig):
                 {
                     "op": "replace",
                     "path": f"/tool_logs/{index}/status",
-                    "value": "completed"
+                    "value": "completed",
                 }
             ],
         )
@@ -409,7 +414,7 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
                     "value": {
                         "message": "Allocating cash",
                         "status": "processing",
-                        "id": tool_log_id
+                        "id": tool_log_id,
                     },
                 }
             ],
@@ -632,7 +637,7 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
                 for t in tickers
                 if not pd.isna(stock_data.loc[date][t])
             )
-            + running_cash
+            # + running_cash
         )
         # SPY value: shares * price + cash
         spy_price = spy_prices.loc[date]
@@ -701,7 +706,7 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
                 {
                     "op": "replace",
                     "path": f"/tool_logs/{index}/status",
-                    "value": "completed"
+                    "value": "completed",
                 }
             ],
         )
@@ -709,11 +714,16 @@ async def cash_allocation_node(state: AgentState, config: RunnableConfig):
     await asyncio.sleep(0)
     return Command(goto="ui_decision", update=state)
 
+
 async def insights_node(state: AgentState, config: RunnableConfig):
     print("inside insights node")
     tool_log_id = str(uuid.uuid4())
     state["tool_logs"].append(
-        {"id": tool_log_id, "message": "Extracting key insights", "status": "processing"}
+        {
+            "id": tool_log_id,
+            "message": "Extracting key insights",
+            "status": "processing",
+        }
     )
     config.get("configurable").get("emit_event")(
         StateDeltaEvent(
@@ -725,7 +735,7 @@ async def insights_node(state: AgentState, config: RunnableConfig):
                     "value": {
                         "message": "Extracting key insights",
                         "status": "processing",
-                        "id": tool_log_id
+                        "id": tool_log_id,
                     },
                 }
             ],
@@ -734,7 +744,7 @@ async def insights_node(state: AgentState, config: RunnableConfig):
     await asyncio.sleep(0)
     args = state.get("be_arguments") or state.get("arguments")
     tickers = args.get("ticker_symbols", [])
-    
+
     model = init_chat_model("gemini-2.5-pro", model_provider="google_genai")
     response = await model.bind_tools(generate_insights).ainvoke(
         [
@@ -761,7 +771,7 @@ async def insights_node(state: AgentState, config: RunnableConfig):
                 {
                     "op": "replace",
                     "path": f"/tool_logs/{index}/status",
-                    "value": "completed"
+                    "value": "completed",
                 }
             ],
         )
